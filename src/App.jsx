@@ -1,0 +1,293 @@
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
+  Trash2, Users, Pencil, CheckCircle2
+} from "lucide-react";
+import { api, token } from "./api";
+
+const STATUS = {
+  scheduled: "Agendado",
+  completed: "Concluído",
+  cancelled: "Cancelado",
+  no_show: "Não compareceu",
+};
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+function Login({ onLogin }) {
+  const [email, setEmail] = useState("admin@barbeariavintage.com");
+  const [password, setPassword] = useState("admin123");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const data = await api.login(email, password);
+      localStorage.setItem("token", data.access_token);
+      onLogin();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return <div className="login-shell">
+    <div className="login-card">
+      <div className="brand-mark"><Scissors size={30}/></div>
+      <p className="eyebrow">BARBEARIA VINTAGE</p>
+      <h1>Gestão simples. Atendimento impecável.</h1>
+      <p className="muted">Acesso interno para organização de clientes e agendamentos.</p>
+      <form onSubmit={submit} className="stack">
+        <label>E-mail<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required /></label>
+        <label>Senha<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required /></label>
+        {error && <div className="alert error">{error}</div>}
+        <button className="primary" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</button>
+      </form>
+    </div>
+  </div>
+}
+
+function Sidebar({ page, setPage, onLogout }) {
+  const items = [
+    ["dashboard", LayoutDashboard, "Dashboard"],
+    ["agenda", CalendarDays, "Agenda"],
+    ["clientes", Users, "Clientes"],
+  ];
+  return <aside className="sidebar">
+    <div className="sidebar-brand"><Scissors/><span>Vintage</span></div>
+    <nav>
+      {items.map(([id, Icon, label]) =>
+        <button key={id} className={page===id ? "active" : ""} onClick={()=>setPage(id)}>
+          <Icon size={19}/>{label}
+        </button>
+      )}
+    </nav>
+    <button className="logout" onClick={onLogout}><LogOut size={18}/>Sair</button>
+  </aside>
+}
+
+function StatCard({ label, value, detail }) {
+  return <div className="stat-card"><span>{label}</span><strong>{value ?? "—"}</strong>{detail && <small>{detail}</small>}</div>
+}
+
+function Dashboard({ goAgenda }) {
+  const [data, setData] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    Promise.all([api.dashboard(), api.appointments(todayISO())])
+      .then(([d, a]) => { setData(d); setAppointments(a); })
+      .catch(e => setError(e.message));
+  }, []);
+
+  return <>
+    <Header title="Dashboard" subtitle="Visão rápida da operação de hoje." action={<button className="primary inline" onClick={goAgenda}><Plus size={18}/>Novo agendamento</button>} />
+    {error && <div className="alert error">{error}</div>}
+    <div className="stats-grid">
+      <StatCard label="Agendamentos hoje" value={data?.appointments_today}/>
+      <StatCard label="Concluídos" value={data?.completed_today}/>
+      <StatCard label="Cancelados" value={data?.cancelled_today}/>
+      <StatCard label="Mais procurado" value={data?.most_popular_service || "—"} detail={`${data?.appointments_this_week ?? 0} atendimentos na semana`}/>
+    </div>
+    <section className="panel">
+      <div className="section-title"><div><h2>Próximos atendimentos</h2><p>Agenda do dia</p></div></div>
+      <AppointmentTable appointments={appointments} compact />
+    </section>
+  </>;
+}
+
+function Header({ title, subtitle, action }) {
+  return <header className="page-header"><div><p className="eyebrow">BARBEARIA VINTAGE</p><h1>{title}</h1><p className="muted">{subtitle}</p></div>{action}</header>
+}
+
+function ClientModal({ initial, onClose, onSaved }) {
+  const [form, setForm] = useState(initial || {name:"", email:"", notes:""});
+  const [error, setError] = useState("");
+
+  async function submit(e) {
+    e.preventDefault();
+    try {
+      if (initial) await api.updateClient(initial.id, form);
+      else await api.createClient(form);
+      onSaved();
+    } catch(e) { setError(e.message); }
+  }
+
+  return <Modal title={initial ? "Editar cliente" : "Novo cliente"} onClose={onClose}>
+    <form className="stack" onSubmit={submit}>
+      <label>Nome<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required minLength={2}/></label>
+      <label>E-mail<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/></label>
+      <label>Observações<textarea rows="4" value={form.notes || ""} onChange={e=>setForm({...form,notes:e.target.value})}/></label>
+      {error && <div className="alert error">{error}</div>}
+      <div className="actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary">Salvar</button></div>
+    </form>
+  </Modal>
+}
+
+function Clients() {
+  const [clients, setClients] = useState([]);
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(null);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    try { setClients(await api.clients(search)); } catch(e) { setError(e.message); }
+  };
+  useEffect(() => { load(); }, [search]);
+
+  async function remove(id) {
+    if (!confirm("Remover este cliente?")) return;
+    try { await api.deleteClient(id); load(); } catch(e) { setError(e.message); }
+  }
+
+  return <>
+    <Header title="Clientes" subtitle="Cadastro centralizado da sua base." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo cliente</button>}/>
+    <div className="toolbar">
+      <div className="search"><Search size={18}/><input placeholder="Pesquisar cliente..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
+    </div>
+    {error && <div className="alert error">{error}</div>}
+    <section className="panel">
+      <div className="client-list">
+        {clients.map(c => <div className="client-row" key={c.id}>
+          <div><strong>{c.name}</strong><span>{c.email}</span>{c.notes && <small>{c.notes}</small>}</div>
+          <div className="row-actions">
+            <button className="icon-btn" title="Editar" onClick={()=>setModal({type:"edit", client:c})}><Pencil size={17}/></button>
+            <button className="icon-btn danger" title="Excluir" onClick={()=>remove(c.id)}><Trash2 size={17}/></button>
+          </div>
+        </div>)}
+        {!clients.length && <Empty text="Nenhum cliente encontrado."/>}
+      </div>
+    </section>
+    {modal && <ClientModal initial={modal.client} onClose={()=>setModal(null)} onSaved={()=>{setModal(null); load();}}/>}
+  </>;
+}
+
+function AppointmentModal({ initial, onClose, onSaved }) {
+  const [clients, setClients] = useState([]);
+  const [services, setServices] = useState([]);
+  const [form, setForm] = useState(initial ? {
+    client_id: initial.client_id, service_id: initial.service_id, date: initial.date,
+    start_time: initial.start_time.slice(0,5), status: initial.status
+  } : {client_id:"", service_id:"", date:todayISO(), start_time:"09:00", status:"scheduled"});
+  const [error, setError] = useState("");
+
+  useEffect(()=>{ Promise.all([api.clients(), api.services()]).then(([c,s])=>{setClients(c); setServices(s);}); },[]);
+
+  async function submit(e) {
+    e.preventDefault();
+    const payload = {...form, client_id:Number(form.client_id), service_id:Number(form.service_id), start_time:`${form.start_time}:00`};
+    try {
+      if (initial) await api.updateAppointment(initial.id, payload);
+      else await api.createAppointment(payload);
+      onSaved();
+    } catch(e) { setError(e.message); }
+  }
+
+  return <Modal title={initial ? "Editar agendamento" : "Novo agendamento"} onClose={onClose}>
+    <form className="stack" onSubmit={submit}>
+      <label>Cliente<select value={form.client_id} onChange={e=>setForm({...form,client_id:e.target.value})} required>
+        <option value="">Selecione...</option>{clients.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}
+      </select></label>
+      <label>Serviço<select value={form.service_id} onChange={e=>setForm({...form,service_id:e.target.value})} required>
+        <option value="">Selecione...</option>{services.map(s=><option value={s.id} key={s.id}>{s.name} · {s.duration_minutes} min</option>)}
+      </select></label>
+      <div className="two-col">
+        <label>Data<input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} required/></label>
+        <label>Horário<input type="time" value={form.start_time} onChange={e=>setForm({...form,start_time:e.target.value})} required/></label>
+      </div>
+      <label>Status<select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
+        {Object.entries(STATUS).map(([v,l])=><option value={v} key={v}>{l}</option>)}
+      </select></label>
+      {error && <div className="alert error">{error}</div>}
+      <div className="actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary">Salvar agendamento</button></div>
+    </form>
+  </Modal>
+}
+
+function AppointmentTable({ appointments, onEdit, onDelete, onStatus, compact=false }) {
+  if (!appointments.length) return <Empty text="Nenhum agendamento para este período." />;
+  return <div className="table-wrap"><table>
+    <thead><tr><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Status</th>{!compact && <th></th>}</tr></thead>
+    <tbody>{appointments.map(a=><tr key={a.id}>
+      <td className="time-cell">{a.start_time.slice(0,5)}</td>
+      <td><strong>{a.client.name}</strong><small>{a.client.email}</small></td>
+      <td>{a.service.name}</td>
+      <td>{compact ? <StatusBadge status={a.status}/> :
+        <select className={`status-select ${a.status}`} value={a.status} onChange={e=>onStatus(a.id,e.target.value)}>
+          {Object.entries(STATUS).map(([v,l])=><option key={v} value={v}>{l}</option>)}
+        </select>}</td>
+      {!compact && <td className="row-actions">
+        <button className="icon-btn" onClick={()=>onEdit(a)}><Pencil size={16}/></button>
+        <button className="icon-btn danger" onClick={()=>onDelete(a.id)}><Trash2 size={16}/></button>
+      </td>}
+    </tr>)}</tbody>
+  </table></div>;
+}
+
+function StatusBadge({status}) { return <span className={`badge ${status}`}>{STATUS[status]}</span>; }
+
+function Agenda() {
+  const [date, setDate] = useState(todayISO());
+  const [status, setStatus] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [modal, setModal] = useState(null);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    try { setAppointments(await api.appointments(date, status)); setError(""); }
+    catch(e){ setError(e.message); }
+  };
+  useEffect(()=>{ load(); },[date,status]);
+
+  async function remove(id) {
+    if (!confirm("Remover este agendamento?")) return;
+    try { await api.deleteAppointment(id); load(); } catch(e){setError(e.message);}
+  }
+  async function changeStatus(id, newStatus) {
+    try { await api.updateStatus(id,newStatus); load(); } catch(e){setError(e.message);}
+  }
+
+  return <>
+    <Header title="Agenda" subtitle="Atendimentos organizados por data e horário." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
+    <div className="toolbar">
+      <label className="filter">Data<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+      <label className="filter">Status<select value={status} onChange={e=>setStatus(e.target.value)}>
+        <option value="">Todos</option>{Object.entries(STATUS).map(([v,l])=><option key={v} value={v}>{l}</option>)}
+      </select></label>
+    </div>
+    {error && <div className="alert error">{error}</div>}
+    <section className="panel"><AppointmentTable appointments={appointments} onEdit={a=>setModal({type:"edit", appointment:a})} onDelete={remove} onStatus={changeStatus}/></section>
+    {modal && <AppointmentModal initial={modal.appointment} onClose={()=>setModal(null)} onSaved={()=>{setModal(null);load();}}/>}
+  </>;
+}
+
+function Modal({title,onClose,children}) {
+  return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
+    <div className="modal"><div className="modal-head"><h2>{title}</h2><button className="close" onClick={onClose}>×</button></div>{children}</div>
+  </div>;
+}
+
+function Empty({text}) { return <div className="empty"><CheckCircle2 size={28}/><p>{text}</p></div>; }
+
+export default function App() {
+  const [authenticated, setAuthenticated] = useState(Boolean(token()));
+  const [page, setPage] = useState("dashboard");
+
+  if (!authenticated) return <Login onLogin={()=>setAuthenticated(true)} />;
+
+  const logout = () => { localStorage.removeItem("token"); setAuthenticated(false); };
+
+  return <div className="app-shell">
+    <Sidebar page={page} setPage={setPage} onLogout={logout}/>
+    <main className="content">
+      {page==="dashboard" && <Dashboard goAgenda={()=>setPage("agenda")}/>}
+      {page==="agenda" && <Agenda/>}
+      {page==="clientes" && <Clients/>}
+    </main>
+  </div>;
+}
