@@ -232,17 +232,40 @@ function AppointmentTable({ appointments, onEdit, onDelete, onStatus, compact=fa
 function StatusBadge({status}) { return <span className={`badge ${status}`}>{STATUS[status]}</span>; }
 
 function Agenda() {
-  const [date, setDate] = useState(todayISO());
   const [status, setStatus] = useState("");
   const [appointments, setAppointments] = useState([]);
   const [modal, setModal] = useState(null);
   const [error, setError] = useState("");
 
   const load = async () => {
-    try { setAppointments(await api.appointments(date, status)); setError(""); }
+    try { setAppointments(await api.appointments("", status)); setError(""); }
     catch(e){ setError(e.message); }
   };
-  useEffect(()=>{ load(); },[date,status]);
+  useEffect(()=>{ load(); },[status]);
+
+  const groupedAppointments = useMemo(() => {
+    return appointments.reduce((groups, appointment) => {
+      if (!groups[appointment.date]) groups[appointment.date] = [];
+      groups[appointment.date].push(appointment);
+      return groups;
+    }, {});
+  }, [appointments]);
+
+  const dates = Object.keys(groupedAppointments).sort();
+
+  const formatDayHeading = (dateString) => {
+    const [year, month, day] = dateString.split("-").map(Number);
+    const value = new Date(year, month - 1, day);
+    const label = value.toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+    const today = todayISO();
+    if (dateString === today) return `Hoje · ${label}`;
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
 
   async function remove(id) {
     if (!confirm("Remover este agendamento?")) return;
@@ -253,15 +276,33 @@ function Agenda() {
   }
 
   return <>
-    <Header title="Agenda" subtitle="Atendimentos organizados por data e horário." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
-    <div className="toolbar">
-      <label className="filter">Data<input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+    <Header title="Agenda" subtitle="Role a página para visualizar os agendamentos de todos os dias." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
+    <div className="toolbar agenda-toolbar">
+      <div className="agenda-hint"><CalendarDays size={18}/><span>Todos os dias aparecem em sequência, organizados por data e horário.</span></div>
       <label className="filter">Status<select value={status} onChange={e=>setStatus(e.target.value)}>
         <option value="">Todos</option>{Object.entries(STATUS).map(([v,l])=><option key={v} value={v}>{l}</option>)}
       </select></label>
     </div>
     {error && <div className="alert error">{error}</div>}
-    <section className="panel"><AppointmentTable appointments={appointments} onEdit={a=>setModal({type:"edit", appointment:a})} onDelete={remove} onStatus={changeStatus}/></section>
+
+    <div className="agenda-scroll-list">
+      {dates.map(date => <section className="day-group" key={date}>
+        <div className="day-heading">
+          <div><span className="day-dot"></span><h2>{formatDayHeading(date)}</h2></div>
+          <span>{groupedAppointments[date].length} {groupedAppointments[date].length === 1 ? "agendamento" : "agendamentos"}</span>
+        </div>
+        <div className="panel day-panel">
+          <AppointmentTable
+            appointments={groupedAppointments[date]}
+            onEdit={a=>setModal({type:"edit", appointment:a})}
+            onDelete={remove}
+            onStatus={changeStatus}
+          />
+        </div>
+      </section>)}
+      {!dates.length && <section className="panel"><Empty text="Nenhum agendamento encontrado."/></section>}
+    </div>
+
     {modal && <AppointmentModal initial={modal.appointment} onClose={()=>setModal(null)} onSaved={()=>{setModal(null);load();}}/>}
   </>;
 }
