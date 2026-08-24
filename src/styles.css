@@ -76,13 +76,171 @@ button { cursor: pointer; }
 
 .sidebar {
   width: var(--sidebar-w);
-  background: var(--surface);
+  background: #fffdfd;
   border-right: 1px solid var(--border);
   padding: 20px 14px;
   display: flex;
   flex-direction: column;
   position: fixed;
   inset: 0 auto 0 0;
+  overflow: hidden;
+}
+
+.sidebar .brew {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.sidebar .blob {
+  position: absolute;
+  mix-blend-mode: multiply;
+  will-change: transform, border-radius;
+}
+
+.blob.b1 {
+  width: 340px; height: 340px;
+  top: -60px; left: -130px;
+  filter: blur(36px);
+  background: radial-gradient(circle at 35% 35%, rgba(248, 113, 113, .5), rgba(220, 38, 38, .26) 60%, transparent 76%);
+  animation: brewMorph1 46s ease-in-out infinite, brewDrift1 46s ease-in-out infinite;
+}
+.blob.b2 {
+  width: 230px; height: 230px;
+  top: 6%; right: -110px;
+  filter: blur(32px);
+  background: radial-gradient(circle at 40% 40%, rgba(220, 38, 38, .46), rgba(185, 28, 28, .24) 60%, transparent 76%);
+  animation: brewMorph2 53s ease-in-out infinite, brewDrift2 53s ease-in-out infinite;
+  animation-delay: -12s, -12s;
+}
+.blob.b3 {
+  width: 300px; height: 300px;
+  top: 26%; left: -140px;
+  filter: blur(40px);
+  background: radial-gradient(circle at 45% 30%, rgba(239, 68, 68, .42), rgba(220, 38, 38, .22) 60%, transparent 76%);
+  animation: brewMorph3 60s ease-in-out infinite, brewDrift3 60s ease-in-out infinite;
+  animation-delay: -27s, -27s;
+}
+.blob.b4 {
+  width: 150px; height: 150px;
+  top: 40%; right: -20px;
+  filter: blur(22px);
+  background: radial-gradient(circle at 50% 50%, rgba(220, 38, 38, .36), rgba(220, 38, 38, .16) 55%, transparent 74%);
+  animation: brewMorph4 37s ease-in-out infinite, brewDrift4 37s ease-in-out infinite;
+  animation-delay: -6s, -6s;
+}
+.blob.b5 {
+  width: 360px; height: 360px;
+  bottom: -110px; left: -90px;
+  filter: blur(42px);
+  background: radial-gradient(circle at 40% 40%, rgba(248, 113, 113, .38), rgba(220, 38, 38, .2) 60%, transparent 76%);
+  animation: brewMorph5 55s ease-in-out infinite, brewDrift5 55s ease-in-out infinite;
+  animation-delay: -19s, -19s;
+}
+.blob.b6 {
+  width: 220px; height: 220px;
+  bottom: 4%; right: -100px;
+  filter: blur(30px);
+  background: radial-gradient(circle at 45% 45%, rgba(220, 38, 38, .4), rgba(185, 28, 28, .2) 60%, transparent 76%);
+  animation: brewMorph6 43s ease-in-out infinite, brewDrift6 43s ease-in-out infinite;
+  animation-delay: -33s, -33s;
+}
+.blob.b7 {
+  width: 130px; height: 130px;
+  top: 62%; left: 40%;
+  filter: blur(20px);
+  background: radial-gradient(circle at 50% 50%, rgba(239, 68, 68, .34), rgba(220, 38, 38, .14) 55%, transparent 74%);
+  animation: brewMorph7 31s ease-in-out infinite, brewDrift7 31s ease-in-out infinite;
+  animation-delay: -3s, -3s;
+}
+
+@keyframes brewMorph1 {
+  0%, 100% { border-radius: 58% 42% 65% 35% / 55% 40% 60% 45%; }
+  33% { border-radius: 42% 58% 35% 65% / 45% 60% 40% 55%; }
+  66% { border-radius: 65% 35% 55% 45% / 60% 45% 55% 40%; }
+}
+@keyframes brewDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(70px, 30vh) scale(1.25); }
+  60% { transform: translate(-30px, 55vh) scale(.8); }
+  85% { transform: translate(30px, 22vh) scale(1.1); }
+}
+
+@keyframes brewMorph2 {
+  0%, 100% { border-radius: 45% 55% 60% 40% / 50% 60% 40% 50%; }
+  40% { border-radius: 60% 40% 45% 55% / 40% 50% 60% 50%; }
+  70% { border-radius: 50% 50% 35% 65% / 55% 45% 55% 45%; }
+}
+@keyframes brewDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  35% { transform: translate(-65px, 32vh) scale(1.2); }
+  65% { transform: translate(20px, 58vh) scale(.85); }
+  88% { transform: translate(-35px, 24vh) scale(1.15); }
+}
+
+@keyframes brewMorph3 {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  38% { border-radius: 35% 65% 55% 45% / 40% 60% 40% 60%; }
+  72% { border-radius: 55% 45% 65% 35% / 55% 45% 55% 45%; }
+}
+@keyframes brewDrift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  32% { transform: translate(55px, -28vh) scale(1.25); }
+  62% { transform: translate(-40px, -50vh) scale(.82); }
+  85% { transform: translate(25px, -20vh) scale(1.1); }
+}
+
+@keyframes brewMorph4 {
+  0%, 100% { border-radius: 50% 50% 55% 45% / 45% 55% 45% 55%; }
+  45% { border-radius: 65% 35% 40% 60% / 55% 45% 60% 40%; }
+  80% { border-radius: 40% 60% 60% 40% / 40% 55% 45% 60%; }
+}
+@keyframes brewDrift4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(-40px, -20vh) scale(1.3); }
+  75% { transform: translate(38px, 16vh) scale(.75); }
+}
+
+@keyframes brewMorph5 {
+  0%, 100% { border-radius: 55% 45% 40% 60% / 50% 60% 40% 50%; }
+  40% { border-radius: 40% 60% 60% 40% / 60% 40% 60% 40%; }
+  75% { border-radius: 60% 40% 50% 50% / 45% 55% 45% 55%; }
+}
+@keyframes brewDrift5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-40px, -28vh) scale(1.2); }
+  65% { transform: translate(30px, -48vh) scale(.85); }
+}
+
+@keyframes brewMorph6 {
+  0%, 100% { border-radius: 48% 52% 58% 42% / 55% 45% 55% 45%; }
+  42% { border-radius: 62% 38% 42% 58% / 42% 58% 42% 58%; }
+  78% { border-radius: 40% 60% 55% 45% / 58% 42% 58% 42%; }
+}
+@keyframes brewDrift6 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  36% { transform: translate(30px, -26vh) scale(1.2); }
+  70% { transform: translate(-25px, -42vh) scale(.88); }
+}
+
+@keyframes brewMorph7 {
+  0%, 100% { border-radius: 55% 45% 45% 55% / 50% 55% 45% 50%; }
+  50% { border-radius: 40% 60% 60% 40% / 60% 40% 60% 40%; }
+}
+@keyframes brewDrift7 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-35px, -22vh) scale(1.3); }
+  65% { transform: translate(30px, 24vh) scale(.7); }
+}
+
+.sidebar-brand,
+.sidebar nav,
+.sidebar .logout {
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-brand {

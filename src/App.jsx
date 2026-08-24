@@ -86,6 +86,15 @@ function Sidebar({ page, setPage, onLogout }) {
     ["financeiro", DollarSign, "Financeiro"],
   ];
   return <aside className="sidebar">
+    <div className="brew" aria-hidden="true">
+      <span className="blob b1"></span>
+      <span className="blob b2"></span>
+      <span className="blob b3"></span>
+      <span className="blob b4"></span>
+      <span className="blob b5"></span>
+      <span className="blob b6"></span>
+      <span className="blob b7"></span>
+    </div>
     <div className="sidebar-brand"><img src="/logo.png" alt="Barbearia Vintage" /></div>
     <nav>
       {items.map(([id, Icon, label]) =>
