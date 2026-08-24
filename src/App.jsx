@@ -348,7 +348,7 @@ function Dashboard({ goAgenda }) {
     </section>
     <div className="dashboard-charts">
       <section className="panel chart-panel">
-        <div className="section-title"><div><h2>Serviços mais procurados</h2><p>Agendamentos desta semana, por serviço.</p></div></div>
+        <div className="section-title"><div><h2>Demanda de serviços</h2><p>Agendamentos desta semana, por serviço.</p></div></div>
         {allAppointments === null ? null : hasWeekPopularity
           ? <ServicePopularityChart data={weekPopularity}/>
           : <Empty text="Nenhum agendamento registrado nesta semana."/>}
