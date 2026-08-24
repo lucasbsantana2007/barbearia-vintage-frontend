@@ -46,4 +46,5 @@ export const api = {
   createExpense: (data) => request("/expenses", { method: "POST", body: JSON.stringify(data) }),
   updateExpense: (id, data) => request(`/expenses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteExpense: (id) => request(`/expenses/${id}`, { method: "DELETE" }),
+  unlockFinance: (password) => request("/finance/unlock", { method: "POST", body: JSON.stringify({ password }) }),
 };

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
   Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, DollarSign,
-  TrendingDown, TrendingUp, ChevronDown
+  TrendingDown, TrendingUp, ChevronDown, Lock
 } from "lucide-react";
 import { api, token } from "./api";
 
@@ -522,6 +522,44 @@ function MonthPicker({ months, value, onChange }) {
   </div>;
 }
 
+function FinanceiroLock({ onUnlock }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await api.unlockFinance(password);
+      onUnlock();
+    } catch (err) {
+      setError(err.status === 401 ? "Chave de acesso incorreta." : err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return <div className="page-fade">
+    <Header title="Financeiro" subtitle="Área restrita. Informe a chave de acesso para continuar." />
+    <div className="lock-shell">
+      <div className="lock-card">
+        <div className="conflict-icon"><Lock size={22}/></div>
+        <h2>Acesso restrito</h2>
+        <p className="muted">Esta área contém informações sensíveis de faturamento e despesas da barbearia.</p>
+        <form className="stack" onSubmit={submit}>
+          <label>Chave de acesso
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoFocus required/>
+          </label>
+          {error && <div className="alert error">{error}</div>}
+          <button className="primary" disabled={loading}>{loading ? "Verificando..." : "Entrar"}</button>
+        </form>
+      </div>
+    </div>
+  </div>;
+}
+
 function Financeiro() {
   const currentMonth = todayISO().slice(0, 7);
   const [appointments, setAppointments] = useState(null);
@@ -675,10 +713,11 @@ function Empty({text}) { return <div className="empty"><Inbox size={26}/><p>{tex
 export default function App() {
   const [authenticated, setAuthenticated] = useState(Boolean(token()));
   const [page, setPage] = useState("dashboard");
+  const [financeUnlocked, setFinanceUnlocked] = useState(false);
 
   if (!authenticated) return <Login onLogin={()=>setAuthenticated(true)} />;
 
-  const logout = () => { localStorage.removeItem("token"); setAuthenticated(false); };
+  const logout = () => { localStorage.removeItem("token"); setAuthenticated(false); setFinanceUnlocked(false); };
 
   return <div className="app-shell">
     <Sidebar page={page} setPage={setPage} onLogout={logout}/>
@@ -686,7 +725,9 @@ export default function App() {
       {page==="dashboard" && <Dashboard goAgenda={()=>setPage("agenda")}/>}
       {page==="agenda" && <Agenda/>}
       {page==="clientes" && <Clients/>}
-      {page==="financeiro" && <Financeiro/>}
+      {page==="financeiro" && (financeUnlocked
+        ? <Financeiro/>
+        : <FinanceiroLock onUnlock={()=>setFinanceUnlocked(true)}/>)}
     </main>
   </div>;
 }

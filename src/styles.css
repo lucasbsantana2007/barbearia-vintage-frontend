@@ -791,6 +791,31 @@ tbody tr {
 .conflict-modal .muted strong { color: var(--text); }
 .conflict-modal .actions { justify-content: center; margin-top: 22px; }
 
+/* ---------------------------------------------------------------
+   Financeiro lock
+   --------------------------------------------------------------- */
+.lock-shell {
+  display: grid;
+  place-items: center;
+  min-height: 50vh;
+  padding: 20px;
+}
+
+.lock-card {
+  width: min(380px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: 32px 28px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  animation: scaleIn .4s cubic-bezier(.16,1,.3,1);
+}
+.lock-card h2 { margin: 0 0 8px; font-size: 18px; font-weight: 650; letter-spacing: -.02em; }
+.lock-card .muted { margin: 0 0 22px; font-size: 14px; line-height: 1.5; }
+.lock-card .stack { text-align: left; }
+.lock-card .primary { width: 100%; margin-top: 4px; padding: 11px 16px; justify-content: center; }
+
 .close {
   border: 0;
   background: transparent;
