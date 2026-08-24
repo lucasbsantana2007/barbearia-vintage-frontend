@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
-  Trash2, Users, Pencil, CheckCircle2
+  Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert
 } from "lucide-react";
 import { api, token } from "./api";
 
@@ -37,7 +37,7 @@ function Login({ onLogin }) {
 
   return <div className="login-shell">
     <div className="login-card">
-      <div className="brand-mark"><Scissors size={30}/></div>
+      <img className="brand-logo" src="/logo.png" alt="Barbearia Vintage" />
       <p className="eyebrow">BARBEARIA VINTAGE</p>
       <h1>Gestão simples. Atendimento impecável.</h1>
       <p className="muted">Acesso interno para organização de clientes e agendamentos.</p>
@@ -58,20 +58,24 @@ function Sidebar({ page, setPage, onLogout }) {
     ["clientes", Users, "Clientes"],
   ];
   return <aside className="sidebar">
-    <div className="sidebar-brand"><Scissors/><span>Vintage</span></div>
+    <div className="sidebar-brand"><img src="/logo.png" alt="Barbearia Vintage" /></div>
     <nav>
       {items.map(([id, Icon, label]) =>
         <button key={id} className={page===id ? "active" : ""} onClick={()=>setPage(id)}>
-          <Icon size={19}/>{label}
+          <Icon size={18}/><span>{label}</span>
         </button>
       )}
     </nav>
-    <button className="logout" onClick={onLogout}><LogOut size={18}/>Sair</button>
+    <button className="logout" onClick={onLogout}><LogOut size={18}/><span>Sair</span></button>
   </aside>
 }
 
-function StatCard({ label, value, detail }) {
-  return <div className="stat-card"><span>{label}</span><strong>{value ?? "—"}</strong>{detail && <small>{detail}</small>}</div>
+function StatCard({ label, value, detail, icon: Icon }) {
+  return <div className="stat-card">
+    <div className="stat-head"><span>{label}</span>{Icon && <Icon size={17}/>}</div>
+    <strong>{value ?? "—"}</strong>
+    {detail && <small>{detail}</small>}
+  </div>
 }
 
 function Dashboard({ goAgenda }) {
@@ -89,10 +93,10 @@ function Dashboard({ goAgenda }) {
     <Header title="Dashboard" subtitle="Visão rápida da operação de hoje." action={<button className="primary inline" onClick={goAgenda}><Plus size={18}/>Novo agendamento</button>} />
     {error && <div className="alert error">{error}</div>}
     <div className="stats-grid">
-      <StatCard label="Agendamentos hoje" value={data?.appointments_today}/>
-      <StatCard label="Concluídos" value={data?.completed_today}/>
-      <StatCard label="Cancelados" value={data?.cancelled_today}/>
-      <StatCard label="Mais procurado" value={data?.most_popular_service || "—"} detail={`${data?.appointments_this_week ?? 0} atendimentos na semana`}/>
+      <StatCard label="Agendamentos hoje" value={data?.appointments_today} icon={CalendarDays}/>
+      <StatCard label="Concluídos" value={data?.completed_today} icon={CheckCircle2}/>
+      <StatCard label="Cancelados" value={data?.cancelled_today} icon={XCircle}/>
+      <StatCard label="Mais procurado" value={data?.most_popular_service || "—"} detail={`${data?.appointments_this_week ?? 0} atendimentos na semana`} icon={Scissors}/>
     </div>
     <section className="panel">
       <div className="section-title"><div><h2>Próximos atendimentos</h2><p>Agenda do dia</p></div></div>
@@ -175,17 +179,45 @@ function AppointmentModal({ initial, onClose, onSaved }) {
     start_time: initial.start_time.slice(0,5), status: initial.status
   } : {client_id:"", service_id:"", date:todayISO(), start_time:"09:00", status:"scheduled"});
   const [error, setError] = useState("");
+  const [conflict, setConflict] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(()=>{ Promise.all([api.clients(), api.services()]).then(([c,s])=>{setClients(c); setServices(s);}); },[]);
 
+  function save(payload) {
+    return initial ? api.updateAppointment(initial.id, payload) : api.createAppointment(payload);
+  }
+
   async function submit(e) {
     e.preventDefault();
+    setError("");
     const payload = {...form, client_id:Number(form.client_id), service_id:Number(form.service_id), start_time:`${form.start_time}:00`};
     try {
-      if (initial) await api.updateAppointment(initial.id, payload);
-      else await api.createAppointment(payload);
+      await save(payload);
       onSaved();
-    } catch(e) { setError(e.message); }
+    } catch(e) {
+      if (e.status === 409) {
+        const dayAppointments = await api.appointments(payload.date).catch(()=>[]);
+        const taken = dayAppointments.find(a => a.start_time === payload.start_time && a.status !== "cancelled" && a.id !== initial?.id);
+        setConflict({ payload, appointment: taken });
+      } else {
+        setError(e.message);
+      }
+    }
+  }
+
+  async function replaceConflict() {
+    setSaving(true);
+    try {
+      if (conflict.appointment) await api.deleteAppointment(conflict.appointment.id);
+      await save(conflict.payload);
+      onSaved();
+    } catch(e) {
+      setConflict(null);
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return <Modal title={initial ? "Editar agendamento" : "Novo agendamento"} onClose={onClose}>
@@ -206,7 +238,31 @@ function AppointmentModal({ initial, onClose, onSaved }) {
       {error && <div className="alert error">{error}</div>}
       <div className="actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary">Salvar agendamento</button></div>
     </form>
+    {conflict && <ConflictDialog
+      appointment={conflict.appointment}
+      saving={saving}
+      onCancel={()=>setConflict(null)}
+      onReplace={replaceConflict}
+    />}
   </Modal>
+}
+
+function ConflictDialog({ appointment, saving, onCancel, onReplace }) {
+  return <div className="modal-backdrop conflict-backdrop">
+    <div className="modal conflict-modal">
+      <div className="conflict-icon"><TriangleAlert size={22}/></div>
+      <h2>Horário já ocupado</h2>
+      <p className="muted">
+        {appointment
+          ? <>Este horário já possui um agendamento de <strong>{appointment.client?.name}</strong> ({appointment.service?.name}). Deseja substituir?</>
+          : "Este horário já possui um agendamento. Deseja substituir?"}
+      </p>
+      <div className="actions">
+        <button type="button" className="ghost" onClick={onCancel} disabled={saving}>Voltar</button>
+        <button type="button" className="primary" onClick={onReplace} disabled={saving}>{saving ? "Substituindo..." : "Substituir"}</button>
+      </div>
+    </div>
+  </div>;
 }
 
 function AppointmentTable({ appointments, onEdit, onDelete, onStatus, compact=false }) {
@@ -313,7 +369,7 @@ function Modal({title,onClose,children}) {
   </div>;
 }
 
-function Empty({text}) { return <div className="empty"><CheckCircle2 size={28}/><p>{text}</p></div>; }
+function Empty({text}) { return <div className="empty"><Inbox size={26}/><p>{text}</p></div>; }
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(Boolean(token()));

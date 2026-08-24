@@ -10,7 +10,11 @@ async function request(path, options = {}) {
   if (response.status === 204) return null;
 
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.detail || "Erro ao processar solicitação.");
+  if (!response.ok) {
+    const error = new Error(body.detail || "Erro ao processar solicitação.");
+    error.status = response.status;
+    throw error;
+  }
   return body;
 }
 
