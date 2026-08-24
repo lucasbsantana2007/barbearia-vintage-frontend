@@ -393,6 +393,8 @@ function Clients() {
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -400,9 +402,18 @@ function Clients() {
   };
   useEffect(() => { load(); }, [search]);
 
-  async function remove(id) {
-    if (!confirm("Remover este cliente?")) return;
-    try { await api.deleteClient(id); load(); } catch(e) { setError(e.message); }
+  async function confirmRemove() {
+    setDeleting(true);
+    try {
+      await api.deleteClient(pendingDelete.id);
+      setPendingDelete(null);
+      load();
+    } catch(e) {
+      setError(e.message);
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return <div className="page-fade">
@@ -421,13 +432,20 @@ function Clients() {
           <div><strong>{c.name}</strong><span>{c.email}</span>{c.notes && <small>{c.notes}</small>}</div>
           <div className="row-actions">
             <button className="icon-btn" title="Editar" onClick={()=>setModal({type:"edit", client:c})}><Pencil size={17}/></button>
-            <button className="icon-btn danger" title="Excluir" onClick={()=>remove(c.id)}><Trash2 size={17}/></button>
+            <button className="icon-btn danger" title="Excluir" onClick={()=>setPendingDelete(c)}><Trash2 size={17}/></button>
           </div>
         </div>)}
         {!clients.length && <Empty text="Nenhum cliente encontrado."/>}
       </div>
     </section>
     {modal && <ClientModal initial={modal.client} onClose={()=>setModal(null)} onSaved={()=>{setModal(null); load();}}/>}
+    {pendingDelete && <ConfirmDialog
+      title="Excluir cliente"
+      message={<>Deseja excluir <strong>{pendingDelete.name}</strong>? Os agendamentos dele também serão excluídos.</>}
+      saving={deleting}
+      onCancel={()=>setPendingDelete(null)}
+      onConfirm={confirmRemove}
+    />}
   </div>;
 }
 
@@ -569,6 +587,20 @@ function ConflictDialog({ appointment, saving, onCancel, onReplace }) {
   </div>;
 }
 
+function ConfirmDialog({ title, message, confirmLabel="Excluir", saving, onCancel, onConfirm }) {
+  return <div className="modal-backdrop conflict-backdrop">
+    <div className="modal conflict-modal">
+      <div className="conflict-icon"><Trash2 size={22}/></div>
+      <h2>{title}</h2>
+      <p className="muted">{message}</p>
+      <div className="actions">
+        <button type="button" className="ghost" onClick={onCancel} disabled={saving}>Voltar</button>
+        <button type="button" className="primary" onClick={onConfirm} disabled={saving}>{saving ? "Excluindo..." : confirmLabel}</button>
+      </div>
+    </div>
+  </div>;
+}
+
 function AppointmentTable({ appointments, onEdit, onDelete, onStatus, compact=false }) {
   if (!appointments.length) return <Empty text="Nenhum agendamento para este período." />;
   return <div className="table-wrap"><table className="appt-table">
@@ -583,7 +615,7 @@ function AppointmentTable({ appointments, onEdit, onDelete, onStatus, compact=fa
         </select>}</td>
       {!compact && <td className="row-actions">
         <button className="icon-btn" onClick={()=>onEdit(a)}><Pencil size={16}/></button>
-        <button className="icon-btn danger" onClick={()=>onDelete(a.id)}><Trash2 size={16}/></button>
+        <button className="icon-btn danger" onClick={()=>onDelete(a)}><Trash2 size={16}/></button>
       </td>}
     </tr>)}</tbody>
   </table></div>;
@@ -596,6 +628,8 @@ function Agenda() {
   const [appointments, setAppointments] = useState([]);
   const [modal, setModal] = useState(null);
   const [showPast, setShowPast] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -631,9 +665,18 @@ function Agenda() {
     return label.charAt(0).toUpperCase() + label.slice(1);
   };
 
-  async function remove(id) {
-    if (!confirm("Remover este agendamento?")) return;
-    try { await api.deleteAppointment(id); load(); } catch(e){setError(e.message);}
+  async function confirmRemove() {
+    setDeleting(true);
+    try {
+      await api.deleteAppointment(pendingDelete.id);
+      setPendingDelete(null);
+      load();
+    } catch(e) {
+      setError(e.message);
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   }
   async function changeStatus(id, newStatus) {
     try { await api.updateStatus(id,newStatus); load(); } catch(e){setError(e.message);}
@@ -648,7 +691,7 @@ function Agenda() {
       <AppointmentTable
         appointments={groupedAppointments[date]}
         onEdit={a=>setModal({type:"edit", appointment:a})}
-        onDelete={remove}
+        onDelete={setPendingDelete}
         onStatus={changeStatus}
       />
     </div>
@@ -680,6 +723,13 @@ function Agenda() {
     </div>
 
     {modal && <AppointmentModal initial={modal.appointment} onClose={()=>setModal(null)} onSaved={()=>{setModal(null);load();}}/>}
+    {pendingDelete && <ConfirmDialog
+      title="Excluir agendamento"
+      message={<>Deseja excluir o agendamento de <strong>{pendingDelete.client?.name}</strong> ({pendingDelete.service?.name})?</>}
+      saving={deleting}
+      onCancel={()=>setPendingDelete(null)}
+      onConfirm={confirmRemove}
+    />}
   </div>;
 }
 
@@ -797,6 +847,8 @@ function Financeiro() {
   const [expenses, setExpenses] = useState(null);
   const [modal, setModal] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const loadExpenses = () => api.expenses()
@@ -864,9 +916,18 @@ function Financeiro() {
     .reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - monthlyExpenseTotal;
 
-  async function removeExpense(id) {
-    if (!confirm("Remover esta despesa?")) return;
-    try { await api.deleteExpense(id); loadExpenses(); } catch (e) { setError(e.message); }
+  async function confirmRemoveExpense() {
+    setDeleting(true);
+    try {
+      await api.deleteExpense(pendingDelete.id);
+      setPendingDelete(null);
+      loadExpenses();
+    } catch (e) {
+      setError(e.message);
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return <div className="page-fade">
@@ -921,7 +982,7 @@ function Financeiro() {
               <td>{currency(e.amount)}</td>
               <td className="row-actions">
                 <button className="icon-btn" onClick={()=>setModal({type:"edit", expense:e})}><Pencil size={16}/></button>
-                <button className="icon-btn danger" onClick={()=>removeExpense(e.id)}><Trash2 size={16}/></button>
+                <button className="icon-btn danger" onClick={()=>setPendingDelete(e)}><Trash2 size={16}/></button>
               </td>
             </tr>)}</tbody>
           </table></div>
@@ -929,6 +990,13 @@ function Financeiro() {
     </section>
 
     {modal && <ExpenseModal initial={modal.expense} onClose={()=>setModal(null)} onSaved={()=>{setModal(null); loadExpenses();}}/>}
+    {pendingDelete && <ConfirmDialog
+      title="Excluir despesa"
+      message={<>Deseja excluir a despesa de <strong>{pendingDelete.category}</strong> ({currency(pendingDelete.amount)})?</>}
+      saving={deleting}
+      onCancel={()=>setPendingDelete(null)}
+      onConfirm={confirmRemoveExpense}
+    />}
   </div>;
 }
 
