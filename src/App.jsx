@@ -15,8 +15,8 @@ const STATUS = {
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 function Login({ onLogin }) {
-  const [email, setEmail] = useState("admin@barbeariavintage.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("barbeariavintageadm@gmail.com");
+  const [password, setPassword] = useState("Insperjr2026*");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +37,7 @@ function Login({ onLogin }) {
 
   return <div className="login-shell">
     <div className="login-card">
-      <img className="brand-logo" src="/logo.png" alt="Barbearia Vintage" />
+      <img className="brand-mark" src="/logo.png" alt="Barbearia Vintage" />
       <p className="eyebrow">BARBEARIA VINTAGE</p>
       <h1>Gestão simples. Atendimento impecável.</h1>
       <p className="muted">Acesso interno para organização de clientes e agendamentos.</p>

@@ -555,8 +555,7 @@ td small { color: var(--muted); font-size: 12px; margin-top: 2px; }
 .login-card .muted { margin-bottom: 24px; }
 .login-card .primary { width: 100%; margin-top: 4px; padding: 11px 16px; }
 
-.brand-mark { margin-bottom: 18px; }
-.brand-mark img { height: 136px; width: auto; object-fit: contain; }
+.brand-mark { display: block; height: 96px; width: auto; max-width: 100%; object-fit: contain; margin: 0 auto 18px; }
 
 /* ---------------------------------------------------------------
    Responsive
