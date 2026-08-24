@@ -326,7 +326,7 @@ function Dashboard({ goAgenda }) {
       <StatCard label="Não compareceu" value={data?.no_show_today} icon={TriangleAlert}/>
     </div>
     <section className="panel">
-      <div className="section-title"><div><h2>Próximos atendimentos</h2><p>Agenda do dia</p></div></div>
+      <div className="section-title"><div><h2>Agenda</h2><p>Próximos atendimentos</p></div></div>
       <AppointmentTable appointments={appointments} compact />
     </section>
     <div className="dashboard-charts">
