@@ -473,6 +473,66 @@ button { cursor: pointer; }
 }
 
 /* ---------------------------------------------------------------
+   Month picker (Financeiro)
+   --------------------------------------------------------------- */
+.month-picker {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.month-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px 14px;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  transition: background .14s ease, border-color .14s ease;
+}
+.month-picker-trigger:hover { background: var(--surface-2); }
+.month-picker-trigger svg:first-child { color: var(--accent); flex-shrink: 0; }
+.month-picker-trigger svg:last-child { color: var(--muted); flex-shrink: 0; transition: transform .18s ease; }
+.month-picker-trigger svg.rotated { transform: rotate(180deg); }
+
+.month-picker-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 15;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  min-width: 210px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+  animation: scaleIn .16s cubic-bezier(.16,1,.3,1);
+}
+
+.month-picker-option {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .12s ease, color .12s ease;
+}
+.month-picker-option:hover { background: var(--surface-2); color: var(--text); }
+.month-picker-option.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+/* ---------------------------------------------------------------
    Toolbar / inputs
    --------------------------------------------------------------- */
 .toolbar {

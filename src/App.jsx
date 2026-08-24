@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
   Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, DollarSign,
-  TrendingDown, TrendingUp
+  TrendingDown, TrendingUp, ChevronDown
 } from "lucide-react";
 import { api, token } from "./api";
 
@@ -37,6 +37,12 @@ function formatMonthLabel(monthStr) {
   const [year, month] = monthStr.split("-").map(Number);
   const label = new Date(year, month - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+const MONTH_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+function formatMonthShort(monthStr) {
+  const [year, month] = monthStr.split("-").map(Number);
+  return `${MONTH_SHORT[month - 1]} ${year}`;
 }
 
 const todayISO = () => {
@@ -487,11 +493,42 @@ function ExpenseModal({ initial, onClose, onSaved }) {
   </Modal>
 }
 
+function MonthPicker({ months, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  return <div className="month-picker" ref={ref}>
+    <button type="button" className="month-picker-trigger" onClick={()=>setOpen(o=>!o)}>
+      <CalendarDays size={16}/>
+      <span>{formatMonthLabel(value)}</span>
+      <ChevronDown size={16} className={open ? "rotated" : ""}/>
+    </button>
+    {open && <div className="month-picker-menu">
+      {months.map(m =>
+        <button type="button" key={m} className={`month-picker-option ${m === value ? "active" : ""}`}
+          onClick={()=>{ onChange(m); setOpen(false); }}>
+          {formatMonthLabel(m)}
+        </button>
+      )}
+    </div>}
+  </div>;
+}
+
 function Financeiro() {
+  const currentMonth = todayISO().slice(0, 7);
   const [appointments, setAppointments] = useState(null);
   const [scheduled, setScheduled] = useState(null);
   const [expenses, setExpenses] = useState(null);
   const [modal, setModal] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [error, setError] = useState("");
 
   const loadExpenses = () => api.expenses()
@@ -504,10 +541,32 @@ function Financeiro() {
     loadExpenses();
   }, []);
 
-  const currentMonth = todayISO().slice(0, 7);
+  const availableMonths = useMemo(() => {
+    const months = new Set([currentMonth]);
+    for (const a of appointments || []) months.add(a.date.slice(0, 7));
+    for (const a of scheduled || []) months.add(a.date.slice(0, 7));
+    for (const e of expenses || []) months.add(e.month);
+    const dataEarliest = [...months].sort()[0];
+
+    const [curYear, curMonthNum] = currentMonth.split("-").map(Number);
+    let fallbackYear = curYear, fallbackMonthNum = curMonthNum - 11;
+    while (fallbackMonthNum <= 0) { fallbackMonthNum += 12; fallbackYear -= 1; }
+    const fallbackEarliest = `${fallbackYear}-${String(fallbackMonthNum).padStart(2, "0")}`;
+    const earliest = dataEarliest < fallbackEarliest ? dataEarliest : fallbackEarliest;
+
+    const full = [];
+    let [year, month] = earliest.split("-").map(Number);
+    while (year < curYear || (year === curYear && month <= curMonthNum)) {
+      full.push(`${year}-${String(month).padStart(2, "0")}`);
+      month += 1;
+      if (month > 12) { month = 1; year += 1; }
+    }
+    return full.reverse();
+  }, [appointments, scheduled, expenses, currentMonth]);
+
   const monthlyAppointments = useMemo(
-    () => (appointments || []).filter(a => a.date.startsWith(currentMonth)),
-    [appointments, currentMonth]
+    () => (appointments || []).filter(a => a.date.startsWith(selectedMonth)),
+    [appointments, selectedMonth]
   );
 
   const breakdown = useMemo(() => {
@@ -524,15 +583,16 @@ function Financeiro() {
 
   const totalRevenue = breakdown.reduce((sum, s) => sum + s.total, 0);
   const totalCompleted = breakdown.reduce((sum, s) => sum + s.count, 0);
-  const pendingCount = (scheduled || []).length;
-  const pendingRevenue = (scheduled || []).reduce((sum, a) => sum + servicePrice(a.service.name), 0);
+  const monthlyScheduled = (scheduled || []).filter(a => a.date.startsWith(selectedMonth));
+  const pendingCount = monthlyScheduled.length;
+  const pendingRevenue = monthlyScheduled.reduce((sum, a) => sum + servicePrice(a.service.name), 0);
 
   const sortedExpenses = useMemo(
     () => [...(expenses || [])].sort((a, b) => b.month.localeCompare(a.month) || a.category.localeCompare(b.category)),
     [expenses]
   );
   const monthlyExpenseTotal = (expenses || [])
-    .filter(e => e.month === currentMonth)
+    .filter(e => e.month === selectedMonth)
     .reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - monthlyExpenseTotal;
 
@@ -542,8 +602,10 @@ function Financeiro() {
   }
 
   return <div className="page-fade">
-    <Header title="Financeiro" subtitle="Preços praticados, faturamento e despesas do mês atual." />
+    <Header title="Financeiro" subtitle={`Faturamento, a receber e despesas de ${formatMonthLabel(selectedMonth)}.`} />
     {error && <div className="alert error">{error}</div>}
+
+    <MonthPicker months={availableMonths} value={selectedMonth} onChange={setSelectedMonth}/>
 
     <section className="panel">
       <div className="section-title"><div><h2>Tabela de preços</h2><p>Valores cobrados por serviço.</p></div></div>
@@ -557,14 +619,14 @@ function Financeiro() {
     </section>
 
     <div className="stats-grid compact">
-      <StatCard label="Faturamento mensal" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"} neste mês`} icon={DollarSign}/>
-      <StatCard label="A receber" value={currency(pendingRevenue)} detail={`${pendingCount} ${pendingCount === 1 ? "agendamento" : "agendamentos"}`} icon={CalendarDays}/>
-      <StatCard label="Despesas do mês" value={currency(monthlyExpenseTotal)} icon={TrendingDown}/>
-      <StatCard label="Lucro do mês" value={currency(netProfit)} detail="Faturamento − despesas" icon={TrendingUp}/>
+      <StatCard label="Faturamento" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"} em ${formatMonthShort(selectedMonth)}`} icon={DollarSign}/>
+      <StatCard label="A receber" value={currency(pendingRevenue)} detail={`${pendingCount} ${pendingCount === 1 ? "agendamento" : "agendamentos"} em ${formatMonthShort(selectedMonth)}`} icon={CalendarDays}/>
+      <StatCard label="Despesas" value={currency(monthlyExpenseTotal)} detail={`Em ${formatMonthShort(selectedMonth)}`} icon={TrendingDown}/>
+      <StatCard label="Lucro" value={currency(netProfit)} detail="Faturamento − despesas" icon={TrendingUp}/>
     </div>
 
     <section className="panel">
-      <div className="section-title"><div><h2>Faturamento por serviço</h2><p>Agendamentos concluídos neste mês.</p></div></div>
+      <div className="section-title"><div><h2>Faturamento por serviço</h2><p>Agendamentos concluídos em {formatMonthLabel(selectedMonth)}.</p></div></div>
       {appointments === null ? null : breakdown.length
         ? <div className="table-wrap"><table>
             <thead><tr><th>Serviço</th><th>Atendimentos</th><th>Subtotal</th></tr></thead>
@@ -574,7 +636,7 @@ function Financeiro() {
               <td>{currency(s.total)}</td>
             </tr>)}</tbody>
           </table></div>
-        : <Empty text="Nenhum agendamento concluído neste mês ainda."/>}
+        : <Empty text="Nenhum agendamento concluído neste mês."/>}
     </section>
 
     <section className="panel">
