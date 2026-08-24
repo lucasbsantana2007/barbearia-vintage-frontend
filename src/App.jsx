@@ -32,13 +32,6 @@ function servicePrice(name = "") {
 }
 
 const EXPENSE_CATEGORIES = ["Produtos", "Funcionários", "Aluguel do espaço", "Impostos", "Manutenção", "Outros"];
-const EXPENSES_KEY = "vintage_expenses";
-
-const loadExpenses = () => {
-  try { return JSON.parse(localStorage.getItem(EXPENSES_KEY)) || []; }
-  catch { return []; }
-};
-const saveExpenses = (list) => localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
 
 function formatMonthLabel(monthStr) {
   const [year, month] = monthStr.split("-").map(Number);
@@ -460,12 +453,20 @@ function ExpenseModal({ initial, onClose, onSaved }) {
     : { category: "", amount: "", month: todayISO().slice(0, 7) });
   const [error, setError] = useState("");
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
+    setError("");
     const amount = Number(form.amount);
     if (!form.category.trim()) { setError("Informe uma categoria."); return; }
     if (!(amount > 0)) { setError("Informe um valor válido."); return; }
-    onSaved({ id: initial?.id || crypto.randomUUID(), category: form.category.trim(), amount, month: form.month });
+    const payload = { category: form.category.trim(), amount, month: form.month };
+    try {
+      if (initial) await api.updateExpense(initial.id, payload);
+      else await api.createExpense(payload);
+      onSaved();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return <Modal title={initial ? "Editar despesa" : "Nova despesa"} onClose={onClose}>
@@ -489,13 +490,18 @@ function ExpenseModal({ initial, onClose, onSaved }) {
 function Financeiro() {
   const [appointments, setAppointments] = useState(null);
   const [scheduled, setScheduled] = useState(null);
-  const [expenses, setExpenses] = useState(loadExpenses);
+  const [expenses, setExpenses] = useState(null);
   const [modal, setModal] = useState(null);
   const [error, setError] = useState("");
+
+  const loadExpenses = () => api.expenses()
+    .then(list => setExpenses(list.map(e => ({ ...e, amount: Number(e.amount) }))))
+    .catch(e => setError(e.message));
 
   useEffect(() => {
     api.appointments("", "completed").then(setAppointments).catch(e => setError(e.message));
     api.appointments("", "scheduled").then(setScheduled).catch(e => setError(e.message));
+    loadExpenses();
   }, []);
 
   const currentMonth = todayISO().slice(0, 7);
@@ -522,24 +528,17 @@ function Financeiro() {
   const pendingRevenue = (scheduled || []).reduce((sum, a) => sum + servicePrice(a.service.name), 0);
 
   const sortedExpenses = useMemo(
-    () => [...expenses].sort((a, b) => b.month.localeCompare(a.month) || a.category.localeCompare(b.category)),
+    () => [...(expenses || [])].sort((a, b) => b.month.localeCompare(a.month) || a.category.localeCompare(b.category)),
     [expenses]
   );
-  const monthlyExpenseTotal = expenses.filter(e => e.month === currentMonth).reduce((sum, e) => sum + e.amount, 0);
+  const monthlyExpenseTotal = (expenses || [])
+    .filter(e => e.month === currentMonth)
+    .reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - monthlyExpenseTotal;
 
-  function persist(list) {
-    setExpenses(list);
-    saveExpenses(list);
-  }
-  function saveExpense(entry) {
-    const exists = expenses.some(e => e.id === entry.id);
-    persist(exists ? expenses.map(e => e.id === entry.id ? entry : e) : [...expenses, entry]);
-    setModal(null);
-  }
-  function removeExpense(id) {
+  async function removeExpense(id) {
     if (!confirm("Remover esta despesa?")) return;
-    persist(expenses.filter(e => e.id !== id));
+    try { await api.deleteExpense(id); loadExpenses(); } catch (e) { setError(e.message); }
   }
 
   return <div className="page-fade">
@@ -583,7 +582,7 @@ function Financeiro() {
         <div><h2>Despesas</h2><p>Custos fixos e variáveis da barbearia, por mês.</p></div>
         <button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Nova despesa</button>
       </div>
-      {sortedExpenses.length
+      {expenses === null ? null : sortedExpenses.length
         ? <div className="table-wrap"><table>
             <thead><tr><th>Mês</th><th>Categoria</th><th>Valor</th><th></th></tr></thead>
             <tbody>{sortedExpenses.map((e, i) => <tr key={e.id} style={{"--i": i}}>
@@ -599,7 +598,7 @@ function Financeiro() {
         : <Empty text="Nenhuma despesa cadastrada ainda."/>}
     </section>
 
-    {modal && <ExpenseModal initial={modal.expense} onClose={()=>setModal(null)} onSaved={saveExpense}/>}
+    {modal && <ExpenseModal initial={modal.expense} onClose={()=>setModal(null)} onSaved={()=>{setModal(null); loadExpenses();}}/>}
   </div>;
 }
 

@@ -42,4 +42,8 @@ export const api = {
     body: JSON.stringify({ status }),
   }),
   deleteAppointment: (id) => request(`/appointments/${id}`, { method: "DELETE" }),
+  expenses: (month = "") => request(`/expenses${month ? `?month=${encodeURIComponent(month)}` : ""}`),
+  createExpense: (data) => request("/expenses", { method: "POST", body: JSON.stringify(data) }),
+  updateExpense: (id, data) => request(`/expenses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteExpense: (id) => request(`/expenses/${id}`, { method: "DELETE" }),
 };
