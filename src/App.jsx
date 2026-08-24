@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
-  Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, Wallet
+  Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, DollarSign
 } from "lucide-react";
 import { api, token } from "./api";
 
@@ -83,7 +83,7 @@ function Sidebar({ page, setPage, onLogout }) {
     ["dashboard", LayoutDashboard, "Dashboard"],
     ["clientes", Users, "Clientes"],
     ["agenda", CalendarDays, "Agenda"],
-    ["financeiro", Wallet, "Financeiro"],
+    ["financeiro", DollarSign, "Financeiro"],
   ];
   return <aside className="sidebar">
     <div className="sidebar-brand"><img src="/logo.png" alt="Barbearia Vintage" /></div>
@@ -469,7 +469,7 @@ function Financeiro() {
     </section>
 
     <div className="stats-grid compact">
-      <StatCard label="Faturamento mensal" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"} neste mês`} icon={Wallet}/>
+      <StatCard label="Faturamento mensal" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"} neste mês`} icon={DollarSign}/>
       <StatCard label="A receber" value={currency(pendingRevenue)} detail={`${pendingCount} ${pendingCount === 1 ? "agendamento" : "agendamentos"}`} icon={CalendarDays}/>
     </div>
 
