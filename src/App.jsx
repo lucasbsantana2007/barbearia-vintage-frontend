@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
+  CalendarDays, LayoutDashboard, LogOut, Plus, Search,
   Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, DollarSign,
   TrendingDown, TrendingUp, ChevronDown, Lock
 } from "lucide-react";
@@ -55,6 +55,44 @@ const todayISO = () => {
   const get = (type) => parts.find(p => p.type === type).value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 };
+
+const parseISODate = (dateStr) => {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+const toISODate = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+function formatDayShort(dateStr) {
+  const [, month, day] = dateStr.split("-").map(Number);
+  return `${day} ${MONTH_SHORT[month - 1]}`;
+}
+
+const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+function weekdayShort(dateStr) {
+  return WEEKDAY_SHORT[parseISODate(dateStr).getDay()];
+}
+
+function currentWeekRange() {
+  const today = parseISODate(todayISO());
+  const isoWeekday = (today.getDay() + 6) % 7; // Monday = 0 ... Sunday = 6
+  const start = new Date(today);
+  start.setDate(today.getDate() - isoWeekday);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return { start: toISODate(start), end: toISODate(end) };
+}
+
+function lastNDaysISO(n) {
+  const today = parseISODate(todayISO());
+  const days = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.push(toISODate(d));
+  }
+  return days;
+}
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState("barbeariavintageadm@gmail.com");
@@ -164,16 +202,119 @@ function StatCard({ label, value, detail, icon: Icon }) {
   </div>
 }
 
+function ServicePopularityChart({ data }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const max = Math.max(1, ...data.map(d => d.count));
+
+  return <div className="chart-bars">
+    {data.map((d, i) => <div className="chart-bar-row" key={d.name} style={{"--i": i}}>
+      <span className="chart-bar-label">{d.name}</span>
+      <div className="chart-bar-track">
+        <div className="chart-bar-fill" style={{ width: mounted ? `${(d.count / max) * 100}%` : "0%" }}/>
+      </div>
+      <span className="chart-bar-value">{d.count}</span>
+    </div>)}
+  </div>;
+}
+
+const axisCurrency = (value) => `R$ ${Math.round(value).toLocaleString("pt-BR")}`;
+
+function RevenueTrendChart({ data }) {
+  const [hover, setHover] = useState(null);
+
+  const width = 600, height = 170;
+  const padLeft = 50, padRight = 10, padTop = 16, padBottom = 26;
+  const chartW = width - padLeft - padRight;
+  const chartH = height - padTop - padBottom;
+  const colWidth = chartW / data.length;
+  const max = Math.max(1, ...data.map(d => d.total));
+
+  const points = data.map((d, i) => ({
+    ...d,
+    x: padLeft + colWidth * i + colWidth / 2,
+    y: padTop + chartH - (d.total / max) * chartH,
+  }));
+
+  const yTicks = [0, max / 2, max].map(value => ({
+    value,
+    y: padTop + chartH - (value / max) * chartH,
+  }));
+
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} `
+    + `L ${points[0].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} Z`;
+
+  return <div className="chart-line-wrap">
+    <svg viewBox={`0 0 ${width} ${height}`} className="chart-line-svg" preserveAspectRatio="none" role="img" aria-label="Faturamento dos últimos 7 dias">
+      <defs>
+        <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22"/>
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      {yTicks.map(t => <g key={t.value}>
+        <line x1={padLeft} y1={t.y} x2={width - padRight} y2={t.y} className={t.value === 0 ? "chart-axis-line" : "chart-grid-line"}/>
+        <text x={padLeft - 8} y={t.y} textAnchor="end" dominantBaseline="middle" className="chart-axis-label">{axisCurrency(t.value)}</text>
+      </g>)}
+      <path d={areaPath} className="chart-area-fill"/>
+      <path d={linePath} className="chart-line-path"/>
+      <g onMouseLeave={()=>setHover(null)}>
+        {points.map((p, i) => <g key={p.date}>
+          <rect x={padLeft + colWidth * i} y={0} width={colWidth} height={height} fill="transparent" onMouseEnter={()=>setHover(i)}/>
+          {hover === i && <line x1={p.x} y1={padTop} x2={p.x} y2={padTop + chartH} className="chart-crosshair"/>}
+          <circle cx={p.x} cy={p.y} r={hover === i ? 5 : 3} className={`chart-dot ${hover === i ? "active" : ""}`}/>
+          <text x={p.x} y={height - 8} textAnchor="middle" className="chart-axis-label">{weekdayShort(p.date)}</text>
+        </g>)}
+      </g>
+    </svg>
+    {hover !== null && <div className="chart-tooltip" style={{ left: `${(points[hover].x / width) * 100}%` }}>
+      <strong>{currency(points[hover].total)}</strong>
+      <span>{formatDayShort(points[hover].date)}</span>
+    </div>}
+  </div>;
+}
+
 function Dashboard({ goAgenda }) {
   const [data, setData] = useState(null);
   const [appointments, setAppointments] = useState([]);
+  const [allAppointments, setAllAppointments] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([api.dashboard(), api.appointments(todayISO())])
-      .then(([d, a]) => { setData(d); setAppointments(a); })
+    Promise.all([api.dashboard(), api.appointments(todayISO()), api.appointments()])
+      .then(([d, a, all]) => { setData(d); setAppointments(a); setAllAppointments(all); })
       .catch(e => setError(e.message));
   }, []);
+
+  const weekPopularity = useMemo(() => {
+    const { start, end } = currentWeekRange();
+    const counts = new Map(PRICE_TABLE.map(s => [s.label, 0]));
+    for (const a of allAppointments || []) {
+      if (a.status === "cancelled") continue;
+      if (a.date < start || a.date > end) continue;
+      const name = a.service.name;
+      counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((x, y) => y.count - x.count);
+  }, [allAppointments]);
+
+  const revenueLast7Days = useMemo(() => {
+    const days = lastNDaysISO(7);
+    const totals = new Map(days.map(d => [d, 0]));
+    for (const a of allAppointments || []) {
+      if (a.status !== "completed" || !totals.has(a.date)) continue;
+      totals.set(a.date, totals.get(a.date) + servicePrice(a.service.name));
+    }
+    return days.map(date => ({ date, total: totals.get(date) }));
+  }, [allAppointments]);
+
+  const totalRevenue7d = revenueLast7Days.reduce((sum, d) => sum + d.total, 0);
+  const hasWeekPopularity = weekPopularity.some(s => s.count > 0);
 
   return <div className="page-fade">
     <Header title="Dashboard" subtitle="Visão rápida da operação de hoje." action={<button className="primary inline" onClick={goAgenda}><Plus size={18}/>Novo agendamento</button>} />
@@ -182,12 +323,24 @@ function Dashboard({ goAgenda }) {
       <StatCard label="Agendamentos hoje" value={data?.appointments_today} icon={CalendarDays}/>
       <StatCard label="Concluídos" value={data?.completed_today} icon={CheckCircle2}/>
       <StatCard label="Cancelados" value={data?.cancelled_today} icon={XCircle}/>
-      <StatCard label="Mais procurado" value={data?.most_popular_service || "—"} detail={`${data?.appointments_this_week ?? 0} atendimentos na semana`} icon={Scissors}/>
+      <StatCard label="Não compareceu" value={data?.no_show_today} icon={TriangleAlert}/>
     </div>
     <section className="panel">
       <div className="section-title"><div><h2>Próximos atendimentos</h2><p>Agenda do dia</p></div></div>
       <AppointmentTable appointments={appointments} compact />
     </section>
+    <div className="dashboard-charts">
+      <section className="panel chart-panel">
+        <div className="section-title"><div><h2>Serviços mais procurados</h2><p>Agendamentos desta semana, por serviço.</p></div></div>
+        {allAppointments === null ? null : hasWeekPopularity
+          ? <ServicePopularityChart data={weekPopularity}/>
+          : <Empty text="Nenhum agendamento registrado nesta semana."/>}
+      </section>
+      <section className="panel chart-panel">
+        <div className="section-title"><div><h2>Faturamento — últimos 7 dias</h2><p>Total de {currency(totalRevenue7d)} em agendamentos concluídos.</p></div></div>
+        {allAppointments === null ? null : <RevenueTrendChart data={revenueLast7Days}/>}
+      </section>
+    </div>
   </div>;
 }
 
@@ -441,9 +594,9 @@ function Agenda() {
   </section>;
 
   return <div className="page-fade">
-    <Header title="Agenda" subtitle="Hoje aparece primeiro, seguido pelos próximos agendamentos." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
+    <Header title="Agenda" subtitle="Acompanhe hoje e os próximos atendimentos agendados." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
     <div className="toolbar agenda-toolbar">
-      <div className="agenda-hint"><CalendarDays size={18}/><span>Dias anteriores ficam ocultos por padrão — use o botão abaixo para vê-los.</span></div>
+      <div className="agenda-hint"><CalendarDays size={18}/><span>Precisa consultar o histórico? Os dias anteriores ficam a um clique.</span></div>
       <label className="filter">Status<select value={status} onChange={e=>setStatus(e.target.value)}>
         <option value="">Todos</option>{Object.entries(STATUS).map(([v,l])=><option key={v} value={v}>{l}</option>)}
       </select></label>
