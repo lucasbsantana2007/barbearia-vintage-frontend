@@ -4,7 +4,7 @@ import {
   Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, DollarSign,
   TrendingDown, TrendingUp, ChevronDown, Lock
 } from "lucide-react";
-import { api, token } from "./api";
+import { api } from "./api";
 
 const STATUS = {
   scheduled: "Agendado",
@@ -109,6 +109,31 @@ function lastNDaysISO(n) {
     days.push(toISODate(d));
   }
   return days;
+}
+
+function Splash({ onContinue }) {
+  return <div
+    className="login-shell splash-shell"
+    role="button"
+    tabIndex={0}
+    onClick={onContinue}
+    onKeyDown={e=>{ if (e.key === "Enter" || e.key === " ") onContinue(); }}
+  >
+    <div className="brew" aria-hidden="true">
+      <span className="blob b1"></span>
+      <span className="blob b2"></span>
+      <span className="blob b3"></span>
+      <span className="blob b4"></span>
+      <span className="blob b5"></span>
+      <span className="blob b6"></span>
+      <span className="blob b7"></span>
+    </div>
+    <div className="splash-content">
+      <img className="brand-mark" src="/logo.png" alt="Barbearia Vintage" />
+      <h1>Bem-vindo!</h1>
+      <p className="splash-hint">Toque na tela para continuar</p>
+    </div>
+  </div>;
 }
 
 function Login({ onLogin }) {
@@ -1009,10 +1034,16 @@ function Modal({title,onClose,children}) {
 function Empty({text}) { return <div className="empty"><Inbox size={26}/><p>{text}</p></div>; }
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(Boolean(token()));
+  const [authenticated, setAuthenticated] = useState(false);
   const [page, setPage] = useState("dashboard");
   const [financeUnlocked, setFinanceUnlocked] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
+  useEffect(() => {
+    localStorage.removeItem("token");
+  }, []);
+
+  if (showSplash) return <Splash onContinue={()=>setShowSplash(false)} />;
   if (!authenticated) return <Login onLogin={()=>setAuthenticated(true)} />;
 
   const logout = () => { localStorage.removeItem("token"); setAuthenticated(false); setFinanceUnlocked(false); };
