@@ -48,7 +48,7 @@ function servicePrice(name = "") {
   return 0;
 }
 
-const EXPENSE_CATEGORIES = ["Produtos", "Funcionários", "Aluguel do espaço", "Impostos", "Manutenção", "Outros"];
+const EXPENSE_CATEGORIES = ["Insumos", "Funcionários", "Aluguel do espaço", "Impostos", "Manutenção", "Outros"];
 
 function formatMonthLabel(monthStr) {
   const [year, month] = monthStr.split("-").map(Number);
@@ -708,7 +708,7 @@ function ExpenseModal({ initial, onClose, onSaved }) {
   return <Modal title={initial ? "Editar despesa" : "Nova despesa"} onClose={onClose}>
     <form className="stack" onSubmit={submit}>
       <label>Categoria
-        <input list="expense-categories" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="Ex.: Produtos" required/>
+        <input list="expense-categories" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="Ex.: Insumos" required/>
         <datalist id="expense-categories">
           {EXPENSE_CATEGORIES.map(c => <option value={c} key={c}/>)}
         </datalist>
