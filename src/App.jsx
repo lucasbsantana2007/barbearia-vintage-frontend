@@ -543,7 +543,7 @@ function AppointmentModal({ initial, onClose, onSaved }) {
         <option value="">Selecione...</option>{clients.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}
       </select></label>
       <label>Serviço<select value={form.service_id} onChange={e=>setForm({...form,service_id:e.target.value})} required>
-        <option value="">Selecione...</option>{services.map(s=><option value={s.id} key={s.id}>{s.name} · {s.duration_minutes} min</option>)}
+        <option value="">Selecione...</option>{services.map(s=><option value={s.id} key={s.id}>{s.name}</option>)}
       </select></label>
       <label>Data<input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value, start_time:""})} required/></label>
       <label>Horário
