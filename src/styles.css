@@ -945,6 +945,73 @@ tbody tr {
 .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
 /* ---------------------------------------------------------------
+   Day schedule (appointment time picker)
+   --------------------------------------------------------------- */
+.day-schedule {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px;
+  background: var(--surface-2);
+}
+
+.day-schedule-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.day-schedule-legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+.day-dot-legend {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+.day-dot-legend.free { background: var(--surface); border: 1px solid var(--border-strong); }
+.day-dot-legend.busy { background: var(--muted); }
+
+.day-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(66px, 1fr));
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.day-slot {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  padding: 7px 4px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background .12s ease, color .12s ease, border-color .12s ease, transform .1s ease;
+}
+.day-slot:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.day-slot:active { transform: scale(.95); }
+
+.day-slot.busy {
+  background: var(--surface-2);
+  color: var(--muted);
+  border-color: var(--border);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+.day-slot.busy:hover { border-color: var(--border); color: var(--muted); background: var(--surface-2); }
+
+.day-slot.selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.day-slot.selected:hover { background: var(--accent-hover); color: #fff; }
+
+/* ---------------------------------------------------------------
    Feedback states
    --------------------------------------------------------------- */
 .alert {

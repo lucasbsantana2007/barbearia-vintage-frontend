@@ -13,6 +13,23 @@ const STATUS = {
   no_show: "Não compareceu",
 };
 
+const BUSINESS_START_MINUTES = 8 * 60;
+const BUSINESS_END_MINUTES = 19 * 60;
+const SLOT_STEP_MINUTES = 30;
+
+const DAY_SLOTS = (() => {
+  const slots = [];
+  for (let m = BUSINESS_START_MINUTES; m < BUSINESS_END_MINUTES; m += SLOT_STEP_MINUTES) {
+    slots.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
+  }
+  return slots;
+})();
+
+const timeToMinutes = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
 const PRICE_TABLE = [
   { key: "corte", label: "Corte", price: 80 },
   { key: "barba", label: "Barba", price: 50 },
@@ -365,7 +382,7 @@ function ClientModal({ initial, onClose, onSaved }) {
     <form className="stack" onSubmit={submit}>
       <label>Nome<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required minLength={2}/></label>
       <label>E-mail<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} required/></label>
-      <label>Observações<textarea rows="4" value={form.notes || ""} onChange={e=>setForm({...form,notes:e.target.value})}/></label>
+      <label>Observações<textarea rows="4" placeholder="(+55 [DDD] 9XXXX-XXXX)" value={form.notes || ""} onChange={e=>setForm({...form,notes:e.target.value})}/></label>
       {error && <div className="alert error">{error}</div>}
       <div className="actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary">Salvar</button></div>
     </form>
@@ -414,6 +431,38 @@ function Clients() {
   </div>;
 }
 
+function DaySchedule({ dayAppointments, excludeId, selected, onSelect }) {
+  const occupied = (dayAppointments || [])
+    .filter(a => a.status !== "cancelled" && a.id !== excludeId)
+    .map(a => {
+      const start = timeToMinutes(a.start_time.slice(0, 5));
+      return { start, end: start + (a.service?.duration_minutes || SLOT_STEP_MINUTES), client: a.client?.name, service: a.service?.name };
+    });
+
+  return <div className="day-schedule">
+    <div className="day-schedule-legend">
+      <span><i className="day-dot-legend free"></i>Livre</span>
+      <span><i className="day-dot-legend busy"></i>Ocupado</span>
+    </div>
+    <div className="day-schedule-grid">
+      {DAY_SLOTS.map(slot => {
+        const slotStart = timeToMinutes(slot);
+        const slotEnd = slotStart + SLOT_STEP_MINUTES;
+        const conflict = occupied.find(o => slotStart < o.end && o.start < slotEnd);
+        const isSelected = slot === selected;
+        return <button
+          type="button"
+          key={slot}
+          disabled={!!conflict}
+          className={`day-slot ${conflict ? "busy" : "free"} ${isSelected ? "selected" : ""}`}
+          title={conflict ? `Ocupado — ${conflict.client} (${conflict.service})` : "Horário disponível"}
+          onClick={()=>onSelect(slot)}
+        >{slot}</button>;
+      })}
+    </div>
+  </div>;
+}
+
 function AppointmentModal({ initial, onClose, onSaved }) {
   const [clients, setClients] = useState([]);
   const [services, setServices] = useState([]);
@@ -424,8 +473,14 @@ function AppointmentModal({ initial, onClose, onSaved }) {
   const [error, setError] = useState("");
   const [conflict, setConflict] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [scheduleAppointments, setScheduleAppointments] = useState([]);
 
   useEffect(()=>{ Promise.all([api.clients(), api.services()]).then(([c,s])=>{setClients(c); setServices(s);}); },[]);
+
+  useEffect(() => {
+    if (!form.date) { setScheduleAppointments([]); return; }
+    api.appointments(form.date).then(setScheduleAppointments).catch(()=>setScheduleAppointments([]));
+  }, [form.date]);
 
   function save(payload) {
     return initial ? api.updateAppointment(initial.id, payload) : api.createAppointment(payload);
@@ -434,6 +489,7 @@ function AppointmentModal({ initial, onClose, onSaved }) {
   async function submit(e) {
     e.preventDefault();
     setError("");
+    if (!form.start_time) { setError("Selecione um horário disponível na agenda do dia."); return; }
     const payload = {...form, client_id:Number(form.client_id), service_id:Number(form.service_id), start_time:`${form.start_time}:00`};
     try {
       await save(payload);
@@ -471,10 +527,15 @@ function AppointmentModal({ initial, onClose, onSaved }) {
       <label>Serviço<select value={form.service_id} onChange={e=>setForm({...form,service_id:e.target.value})} required>
         <option value="">Selecione...</option>{services.map(s=><option value={s.id} key={s.id}>{s.name} · {s.duration_minutes} min</option>)}
       </select></label>
-      <div className="two-col">
-        <label>Data<input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} required/></label>
-        <label>Horário<input type="time" value={form.start_time} onChange={e=>setForm({...form,start_time:e.target.value})} required/></label>
-      </div>
+      <label>Data<input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value, start_time:""})} required/></label>
+      <label>Horário
+        <DaySchedule
+          dayAppointments={scheduleAppointments}
+          excludeId={initial?.id}
+          selected={form.start_time}
+          onSelect={(slot)=>setForm({...form,start_time:slot})}
+        />
+      </label>
       <label>Status<select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
         {Object.entries(STATUS).map(([v,l])=><option value={v} key={v}>{l}</option>)}
       </select></label>
