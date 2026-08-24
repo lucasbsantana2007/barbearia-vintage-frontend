@@ -48,7 +48,6 @@
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(.95) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes floatBlob { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(24px, -28px) scale(1.08); } }
 @keyframes pulseRing { 0%, 100% { box-shadow: 0 0 0 3px var(--accent-soft); } 50% { box-shadow: 0 0 0 7px var(--accent-soft); } }
 
 * { box-sizing: border-box; }
@@ -86,7 +85,7 @@ button { cursor: pointer; }
   overflow: hidden;
 }
 
-.sidebar .brew {
+.brew {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -95,7 +94,7 @@ button { cursor: pointer; }
   isolation: isolate;
 }
 
-.sidebar .blob {
+.blob {
   position: absolute;
   mix-blend-mode: multiply;
   will-change: transform, border-radius;
@@ -785,29 +784,6 @@ tbody tr {
   background:
     radial-gradient(60% 50% at 50% 0%, rgba(220, 38, 38, .07), transparent 70%),
     var(--bg);
-}
-
-.login-shell::before,
-.login-shell::after {
-  content: "";
-  position: absolute;
-  width: 380px;
-  height: 380px;
-  border-radius: 50%;
-  filter: blur(80px);
-  z-index: 0;
-  animation: floatBlob 15s ease-in-out infinite;
-}
-.login-shell::before {
-  background: radial-gradient(circle, rgba(220, 38, 38, .22), transparent 70%);
-  top: -140px;
-  left: -100px;
-}
-.login-shell::after {
-  background: radial-gradient(circle, rgba(220, 38, 38, .13), transparent 70%);
-  bottom: -160px;
-  right: -100px;
-  animation-delay: -7.5s;
 }
 
 .login-card {

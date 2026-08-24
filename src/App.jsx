@@ -63,6 +63,15 @@ function Login({ onLogin }) {
   }
 
   return <div className="login-shell">
+    <div className="brew" aria-hidden="true">
+      <span className="blob b1"></span>
+      <span className="blob b2"></span>
+      <span className="blob b3"></span>
+      <span className="blob b4"></span>
+      <span className="blob b5"></span>
+      <span className="blob b6"></span>
+      <span className="blob b7"></span>
+    </div>
     <div className="login-card">
       <img className="brand-mark" src="/logo.png" alt="Barbearia Vintage" />
       <p className="eyebrow">BARBEARIA VINTAGE</p>
