@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
-  Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert
+  Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, Wallet
 } from "lucide-react";
 import { api, token } from "./api";
 
@@ -11,6 +11,24 @@ const STATUS = {
   cancelled: "Cancelado",
   no_show: "Não compareceu",
 };
+
+const PRICE_TABLE = [
+  { key: "corte", label: "Corte", price: 80 },
+  { key: "barba", label: "Barba", price: 50 },
+  { key: "combo", label: "Corte + Barba", price: 120 },
+];
+
+const currency = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
+
+function servicePrice(name = "") {
+  const normalized = name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const hasCorte = normalized.includes("corte");
+  const hasBarba = normalized.includes("barba");
+  if (hasCorte && hasBarba) return PRICE_TABLE[2].price;
+  if (hasCorte) return PRICE_TABLE[0].price;
+  if (hasBarba) return PRICE_TABLE[1].price;
+  return 0;
+}
 
 const todayISO = () => {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -65,6 +83,7 @@ function Sidebar({ page, setPage, onLogout }) {
     ["dashboard", LayoutDashboard, "Dashboard"],
     ["clientes", Users, "Clientes"],
     ["agenda", CalendarDays, "Agenda"],
+    ["financeiro", Wallet, "Financeiro"],
   ];
   return <aside className="sidebar">
     <div className="sidebar-brand"><img src="/logo.png" alt="Barbearia Vintage" /></div>
@@ -401,6 +420,69 @@ function Agenda() {
   </div>;
 }
 
+function Financeiro() {
+  const [appointments, setAppointments] = useState(null);
+  const [scheduled, setScheduled] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api.appointments("", "completed").then(setAppointments).catch(e => setError(e.message));
+    api.appointments("", "scheduled").then(setScheduled).catch(e => setError(e.message));
+  }, []);
+
+  const breakdown = useMemo(() => {
+    const byService = new Map();
+    for (const a of appointments || []) {
+      const name = a.service.name;
+      const entry = byService.get(name) || { name, count: 0, total: 0 };
+      entry.count += 1;
+      entry.total += servicePrice(name);
+      byService.set(name, entry);
+    }
+    return [...byService.values()].sort((x, y) => y.total - x.total);
+  }, [appointments]);
+
+  const totalRevenue = breakdown.reduce((sum, s) => sum + s.total, 0);
+  const totalCompleted = breakdown.reduce((sum, s) => sum + s.count, 0);
+  const pendingCount = (scheduled || []).length;
+  const pendingRevenue = (scheduled || []).reduce((sum, a) => sum + servicePrice(a.service.name), 0);
+
+  return <div className="page-fade">
+    <Header title="Financeiro" subtitle="Preços praticados e faturamento gerado pelos atendimentos concluídos." />
+    {error && <div className="alert error">{error}</div>}
+
+    <section className="panel">
+      <div className="section-title"><div><h2>Tabela de preços</h2><p>Valores cobrados por serviço.</p></div></div>
+      <div className="table-wrap"><table>
+        <thead><tr><th>Serviço</th><th>Valor</th></tr></thead>
+        <tbody>{PRICE_TABLE.map((s, i) => <tr key={s.key} style={{"--i": i}}>
+          <td><strong>{s.label}</strong></td>
+          <td>{currency(s.price)}</td>
+        </tr>)}</tbody>
+      </table></div>
+    </section>
+
+    <div className="stats-grid compact">
+      <StatCard label="Faturamento (concluídos)" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"}`} icon={Wallet}/>
+      <StatCard label="A receber" value={currency(pendingRevenue)} detail={`${pendingCount} ${pendingCount === 1 ? "agendamento" : "agendamentos"}`} icon={CalendarDays}/>
+    </div>
+
+    <section className="panel">
+      <div className="section-title"><div><h2>Faturamento por serviço</h2><p>Somente agendamentos marcados como concluído.</p></div></div>
+      {appointments === null ? null : breakdown.length
+        ? <div className="table-wrap"><table>
+            <thead><tr><th>Serviço</th><th>Atendimentos</th><th>Subtotal</th></tr></thead>
+            <tbody>{breakdown.map((s, i) => <tr key={s.name} style={{"--i": i}}>
+              <td><strong>{s.name}</strong></td>
+              <td>{s.count}</td>
+              <td>{currency(s.total)}</td>
+            </tr>)}</tbody>
+          </table></div>
+        : <Empty text="Nenhum agendamento concluído ainda."/>}
+    </section>
+  </div>;
+}
+
 function Modal({title,onClose,children}) {
   return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
     <div className="modal"><div className="modal-head"><h2>{title}</h2><button className="close" onClick={onClose}>×</button></div>{children}</div>
@@ -423,6 +505,7 @@ export default function App() {
       {page==="dashboard" && <Dashboard goAgenda={()=>setPage("agenda")}/>}
       {page==="agenda" && <Agenda/>}
       {page==="clientes" && <Clients/>}
+      {page==="financeiro" && <Financeiro/>}
     </main>
   </div>;
 }

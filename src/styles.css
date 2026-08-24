@@ -240,6 +240,9 @@ button { cursor: pointer; }
   margin-bottom: 20px;
 }
 
+.stats-grid.compact { grid-template-columns: repeat(auto-fit, minmax(200px, 260px)); margin: 20px 0; }
+.panel + .panel { margin-top: 20px; }
+
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
