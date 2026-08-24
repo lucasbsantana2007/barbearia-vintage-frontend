@@ -31,3 +31,16 @@ VITE_API_URL=http://localhost:8000
 - Agenda
 - Cadastro/edição de agendamento
 - Atualização de status
+- Financeiro (tabela de preços, faturamento, a receber, despesas e lucro por mês, com seletor de mês)
+
+## Financeiro
+
+Área protegida por uma chave de acesso extra, além do login (validada pelo backend em `POST /finance/unlock`). Chave padrão:
+
+```
+Confidencial2026
+```
+
+Troque em `FINANCE_PASSCODE` no `.env` do backend.
+
+Despesas (produtos, funcionários, aluguel, impostos etc.) são cadastradas por lá e usadas junto com os agendamentos concluídos para calcular faturamento, despesas e lucro de cada mês.
