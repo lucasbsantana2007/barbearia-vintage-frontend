@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
-  Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, DollarSign
+  Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert, DollarSign,
+  TrendingDown, TrendingUp
 } from "lucide-react";
 import { api, token } from "./api";
 
@@ -28,6 +29,21 @@ function servicePrice(name = "") {
   if (hasCorte) return PRICE_TABLE[0].price;
   if (hasBarba) return PRICE_TABLE[1].price;
   return 0;
+}
+
+const EXPENSE_CATEGORIES = ["Produtos", "Funcionários", "Aluguel do espaço", "Impostos", "Manutenção", "Outros"];
+const EXPENSES_KEY = "vintage_expenses";
+
+const loadExpenses = () => {
+  try { return JSON.parse(localStorage.getItem(EXPENSES_KEY)) || []; }
+  catch { return []; }
+};
+const saveExpenses = (list) => localStorage.setItem(EXPENSES_KEY, JSON.stringify(list));
+
+function formatMonthLabel(monthStr) {
+  const [year, month] = monthStr.split("-").map(Number);
+  const label = new Date(year, month - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 const todayISO = () => {
@@ -438,9 +454,43 @@ function Agenda() {
   </div>;
 }
 
+function ExpenseModal({ initial, onClose, onSaved }) {
+  const [form, setForm] = useState(initial
+    ? { category: initial.category, amount: String(initial.amount), month: initial.month }
+    : { category: "", amount: "", month: todayISO().slice(0, 7) });
+  const [error, setError] = useState("");
+
+  function submit(e) {
+    e.preventDefault();
+    const amount = Number(form.amount);
+    if (!form.category.trim()) { setError("Informe uma categoria."); return; }
+    if (!(amount > 0)) { setError("Informe um valor válido."); return; }
+    onSaved({ id: initial?.id || crypto.randomUUID(), category: form.category.trim(), amount, month: form.month });
+  }
+
+  return <Modal title={initial ? "Editar despesa" : "Nova despesa"} onClose={onClose}>
+    <form className="stack" onSubmit={submit}>
+      <label>Categoria
+        <input list="expense-categories" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="Ex.: Produtos" required/>
+        <datalist id="expense-categories">
+          {EXPENSE_CATEGORIES.map(c => <option value={c} key={c}/>)}
+        </datalist>
+      </label>
+      <div className="two-col">
+        <label>Valor<input type="number" min="0" step="0.01" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} required/></label>
+        <label>Mês<input type="month" value={form.month} onChange={e=>setForm({...form,month:e.target.value})} required/></label>
+      </div>
+      {error && <div className="alert error">{error}</div>}
+      <div className="actions"><button type="button" className="ghost" onClick={onClose}>Cancelar</button><button className="primary">Salvar despesa</button></div>
+    </form>
+  </Modal>
+}
+
 function Financeiro() {
   const [appointments, setAppointments] = useState(null);
   const [scheduled, setScheduled] = useState(null);
+  const [expenses, setExpenses] = useState(loadExpenses);
+  const [modal, setModal] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -471,8 +521,29 @@ function Financeiro() {
   const pendingCount = (scheduled || []).length;
   const pendingRevenue = (scheduled || []).reduce((sum, a) => sum + servicePrice(a.service.name), 0);
 
+  const sortedExpenses = useMemo(
+    () => [...expenses].sort((a, b) => b.month.localeCompare(a.month) || a.category.localeCompare(b.category)),
+    [expenses]
+  );
+  const monthlyExpenseTotal = expenses.filter(e => e.month === currentMonth).reduce((sum, e) => sum + e.amount, 0);
+  const netProfit = totalRevenue - monthlyExpenseTotal;
+
+  function persist(list) {
+    setExpenses(list);
+    saveExpenses(list);
+  }
+  function saveExpense(entry) {
+    const exists = expenses.some(e => e.id === entry.id);
+    persist(exists ? expenses.map(e => e.id === entry.id ? entry : e) : [...expenses, entry]);
+    setModal(null);
+  }
+  function removeExpense(id) {
+    if (!confirm("Remover esta despesa?")) return;
+    persist(expenses.filter(e => e.id !== id));
+  }
+
   return <div className="page-fade">
-    <Header title="Financeiro" subtitle="Preços praticados e faturamento do mês atual." />
+    <Header title="Financeiro" subtitle="Preços praticados, faturamento e despesas do mês atual." />
     {error && <div className="alert error">{error}</div>}
 
     <section className="panel">
@@ -489,6 +560,8 @@ function Financeiro() {
     <div className="stats-grid compact">
       <StatCard label="Faturamento mensal" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"} neste mês`} icon={DollarSign}/>
       <StatCard label="A receber" value={currency(pendingRevenue)} detail={`${pendingCount} ${pendingCount === 1 ? "agendamento" : "agendamentos"}`} icon={CalendarDays}/>
+      <StatCard label="Despesas do mês" value={currency(monthlyExpenseTotal)} icon={TrendingDown}/>
+      <StatCard label="Lucro do mês" value={currency(netProfit)} detail="Faturamento − despesas" icon={TrendingUp}/>
     </div>
 
     <section className="panel">
@@ -504,6 +577,29 @@ function Financeiro() {
           </table></div>
         : <Empty text="Nenhum agendamento concluído neste mês ainda."/>}
     </section>
+
+    <section className="panel">
+      <div className="section-title">
+        <div><h2>Despesas</h2><p>Custos fixos e variáveis da barbearia, por mês.</p></div>
+        <button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Nova despesa</button>
+      </div>
+      {sortedExpenses.length
+        ? <div className="table-wrap"><table>
+            <thead><tr><th>Mês</th><th>Categoria</th><th>Valor</th><th></th></tr></thead>
+            <tbody>{sortedExpenses.map((e, i) => <tr key={e.id} style={{"--i": i}}>
+              <td>{formatMonthLabel(e.month)}</td>
+              <td><strong>{e.category}</strong></td>
+              <td>{currency(e.amount)}</td>
+              <td className="row-actions">
+                <button className="icon-btn" onClick={()=>setModal({type:"edit", expense:e})}><Pencil size={16}/></button>
+                <button className="icon-btn danger" onClick={()=>removeExpense(e.id)}><Trash2 size={16}/></button>
+              </td>
+            </tr>)}</tbody>
+          </table></div>
+        : <Empty text="Nenhuma despesa cadastrada ainda."/>}
+    </section>
+
+    {modal && <ExpenseModal initial={modal.expense} onClose={()=>setModal(null)} onSaved={saveExpense}/>}
   </div>;
 }
 
