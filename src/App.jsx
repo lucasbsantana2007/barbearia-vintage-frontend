@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays, LayoutDashboard, LogOut, Plus, Scissors, Search,
   Trash2, Users, Pencil, CheckCircle2, XCircle, Inbox, TriangleAlert
@@ -79,10 +79,35 @@ function Sidebar({ page, setPage, onLogout }) {
   </aside>
 }
 
+function AnimatedNumber({ value }) {
+  const [display, setDisplay] = useState(0);
+  const prevRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof value !== "number") return;
+    const from = prevRef.current;
+    const to = value;
+    const start = performance.now();
+    const duration = 600;
+    let raf;
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else prevRef.current = to;
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+
+  return typeof value === "number" ? display : (value ?? "—");
+}
+
 function StatCard({ label, value, detail, icon: Icon }) {
   return <div className="stat-card">
     <div className="stat-head"><span>{label}</span>{Icon && <Icon size={17}/>}</div>
-    <strong>{value ?? "—"}</strong>
+    <strong><AnimatedNumber value={value}/></strong>
     {detail && <small>{detail}</small>}
   </div>
 }
@@ -98,7 +123,7 @@ function Dashboard({ goAgenda }) {
       .catch(e => setError(e.message));
   }, []);
 
-  return <>
+  return <div className="page-fade">
     <Header title="Dashboard" subtitle="Visão rápida da operação de hoje." action={<button className="primary inline" onClick={goAgenda}><Plus size={18}/>Novo agendamento</button>} />
     {error && <div className="alert error">{error}</div>}
     <div className="stats-grid">
@@ -111,7 +136,7 @@ function Dashboard({ goAgenda }) {
       <div className="section-title"><div><h2>Próximos atendimentos</h2><p>Agenda do dia</p></div></div>
       <AppointmentTable appointments={appointments} compact />
     </section>
-  </>;
+  </div>;
 }
 
 function Header({ title, subtitle, action }) {
@@ -158,7 +183,7 @@ function Clients() {
     try { await api.deleteClient(id); load(); } catch(e) { setError(e.message); }
   }
 
-  return <>
+  return <div className="page-fade">
     <Header title="Clientes" subtitle="Cadastro centralizado da sua base." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo cliente</button>}/>
     <div className="toolbar">
       <div className="search"><Search size={18}/><input placeholder="Pesquisar cliente..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
@@ -170,7 +195,7 @@ function Clients() {
         <span className="count-pill">{clients.length} {clients.length === 1 ? "cliente" : "clientes"}</span>
       </div>
       <div className="client-list">
-        {clients.map(c => <div className="client-row" key={c.id}>
+        {clients.map((c,i) => <div className="client-row" key={c.id} style={{"--i": Math.min(i,10)}}>
           <div><strong>{c.name}</strong><span>{c.email}</span>{c.notes && <small>{c.notes}</small>}</div>
           <div className="row-actions">
             <button className="icon-btn" title="Editar" onClick={()=>setModal({type:"edit", client:c})}><Pencil size={17}/></button>
@@ -181,7 +206,7 @@ function Clients() {
       </div>
     </section>
     {modal && <ClientModal initial={modal.client} onClose={()=>setModal(null)} onSaved={()=>{setModal(null); load();}}/>}
-  </>;
+  </div>;
 }
 
 function AppointmentModal({ initial, onClose, onSaved }) {
@@ -282,7 +307,7 @@ function AppointmentTable({ appointments, onEdit, onDelete, onStatus, compact=fa
   if (!appointments.length) return <Empty text="Nenhum agendamento para este período." />;
   return <div className="table-wrap"><table>
     <thead><tr><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Status</th>{!compact && <th></th>}</tr></thead>
-    <tbody>{appointments.map(a=><tr key={a.id}>
+    <tbody>{appointments.map((a,i)=><tr key={a.id} style={{"--i": Math.min(i,10)}}>
       <td className="time-cell">{a.start_time.slice(0,5)}</td>
       <td><strong>{a.client.name}</strong><small>{a.client.email}</small></td>
       <td>{a.service.name}</td>
@@ -344,7 +369,7 @@ function Agenda() {
     try { await api.updateStatus(id,newStatus); load(); } catch(e){setError(e.message);}
   }
 
-  return <>
+  return <div className="page-fade">
     <Header title="Agenda" subtitle="Role a página para visualizar os agendamentos de todos os dias." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
     <div className="toolbar agenda-toolbar">
       <div className="agenda-hint"><CalendarDays size={18}/><span>Todos os dias aparecem em sequência, organizados por data e horário.</span></div>
@@ -355,7 +380,7 @@ function Agenda() {
     {error && <div className="alert error">{error}</div>}
 
     <div className="agenda-scroll-list">
-      {dates.map(date => <section className="day-group" key={date}>
+      {dates.map((date,i) => <section className="day-group" key={date} style={{"--i": Math.min(i,10)}}>
         <div className="day-heading">
           <div><span className="day-dot"></span><h2>{formatDayHeading(date)}</h2></div>
           <span>{groupedAppointments[date].length} {groupedAppointments[date].length === 1 ? "agendamento" : "agendamentos"}</span>
@@ -373,7 +398,7 @@ function Agenda() {
     </div>
 
     {modal && <AppointmentModal initial={modal.appointment} onClose={()=>setModal(null)} onSaved={()=>{setModal(null);load();}}/>}
-  </>;
+  </div>;
 }
 
 function Modal({title,onClose,children}) {
