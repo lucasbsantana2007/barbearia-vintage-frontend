@@ -324,7 +324,7 @@ function ConflictDialog({ appointment, saving, onCancel, onReplace }) {
 
 function AppointmentTable({ appointments, onEdit, onDelete, onStatus, compact=false }) {
   if (!appointments.length) return <Empty text="Nenhum agendamento para este período." />;
-  return <div className="table-wrap"><table>
+  return <div className="table-wrap"><table className="appt-table">
     <thead><tr><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Status</th>{!compact && <th></th>}</tr></thead>
     <tbody>{appointments.map((a,i)=><tr key={a.id} style={{"--i": Math.min(i,10)}}>
       <td className="time-cell">{a.start_time.slice(0,5)}</td>
@@ -430,9 +430,15 @@ function Financeiro() {
     api.appointments("", "scheduled").then(setScheduled).catch(e => setError(e.message));
   }, []);
 
+  const currentMonth = todayISO().slice(0, 7);
+  const monthlyAppointments = useMemo(
+    () => (appointments || []).filter(a => a.date.startsWith(currentMonth)),
+    [appointments, currentMonth]
+  );
+
   const breakdown = useMemo(() => {
     const byService = new Map();
-    for (const a of appointments || []) {
+    for (const a of monthlyAppointments) {
       const name = a.service.name;
       const entry = byService.get(name) || { name, count: 0, total: 0 };
       entry.count += 1;
@@ -440,7 +446,7 @@ function Financeiro() {
       byService.set(name, entry);
     }
     return [...byService.values()].sort((x, y) => y.total - x.total);
-  }, [appointments]);
+  }, [monthlyAppointments]);
 
   const totalRevenue = breakdown.reduce((sum, s) => sum + s.total, 0);
   const totalCompleted = breakdown.reduce((sum, s) => sum + s.count, 0);
@@ -448,7 +454,7 @@ function Financeiro() {
   const pendingRevenue = (scheduled || []).reduce((sum, a) => sum + servicePrice(a.service.name), 0);
 
   return <div className="page-fade">
-    <Header title="Financeiro" subtitle="Preços praticados e faturamento gerado pelos atendimentos concluídos." />
+    <Header title="Financeiro" subtitle="Preços praticados e faturamento do mês atual." />
     {error && <div className="alert error">{error}</div>}
 
     <section className="panel">
@@ -463,12 +469,12 @@ function Financeiro() {
     </section>
 
     <div className="stats-grid compact">
-      <StatCard label="Faturamento (concluídos)" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"}`} icon={Wallet}/>
+      <StatCard label="Faturamento mensal" value={currency(totalRevenue)} detail={`${totalCompleted} ${totalCompleted === 1 ? "atendimento" : "atendimentos"} neste mês`} icon={Wallet}/>
       <StatCard label="A receber" value={currency(pendingRevenue)} detail={`${pendingCount} ${pendingCount === 1 ? "agendamento" : "agendamentos"}`} icon={CalendarDays}/>
     </div>
 
     <section className="panel">
-      <div className="section-title"><div><h2>Faturamento por serviço</h2><p>Somente agendamentos marcados como concluído.</p></div></div>
+      <div className="section-title"><div><h2>Faturamento por serviço</h2><p>Agendamentos concluídos neste mês.</p></div></div>
       {appointments === null ? null : breakdown.length
         ? <div className="table-wrap"><table>
             <thead><tr><th>Serviço</th><th>Atendimentos</th><th>Subtotal</th></tr></thead>
@@ -478,7 +484,7 @@ function Financeiro() {
               <td>{currency(s.total)}</td>
             </tr>)}</tbody>
           </table></div>
-        : <Empty text="Nenhum agendamento concluído ainda."/>}
+        : <Empty text="Nenhum agendamento concluído neste mês ainda."/>}
     </section>
   </div>;
 }

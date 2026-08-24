@@ -425,6 +425,14 @@ tbody tr {
   animation-delay: calc(var(--i, 0) * 30ms);
 }
 
+.appt-table { table-layout: fixed; }
+.appt-table th:nth-child(1), .appt-table td:nth-child(1) { width: 96px; }
+.appt-table th:nth-child(3), .appt-table td:nth-child(3) { width: 180px; }
+.appt-table th:nth-child(4), .appt-table td:nth-child(4) { width: 190px; }
+.appt-table th:nth-child(5), .appt-table td:nth-child(5) { width: 92px; }
+.appt-table td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
+.appt-table td:nth-child(2) small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .time-cell {
   font-weight: 600;
   color: var(--text);
