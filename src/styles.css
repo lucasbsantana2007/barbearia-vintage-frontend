@@ -105,14 +105,14 @@ button { cursor: pointer; }
   width: 340px; height: 340px;
   top: -60px; left: -130px;
   filter: blur(36px);
-  background: radial-gradient(circle at 35% 35%, rgba(248, 113, 113, .5), rgba(220, 38, 38, .26) 60%, transparent 76%);
+  background: radial-gradient(circle at 35% 35%, rgba(248, 113, 113, .28), rgba(220, 38, 38, .14) 60%, transparent 76%);
   animation: brewMorph1 46s ease-in-out infinite, brewDrift1 46s ease-in-out infinite;
 }
 .blob.b2 {
   width: 230px; height: 230px;
   top: 6%; right: -110px;
   filter: blur(32px);
-  background: radial-gradient(circle at 40% 40%, rgba(220, 38, 38, .46), rgba(185, 28, 28, .24) 60%, transparent 76%);
+  background: radial-gradient(circle at 40% 40%, rgba(220, 38, 38, .25), rgba(185, 28, 28, .13) 60%, transparent 76%);
   animation: brewMorph2 53s ease-in-out infinite, brewDrift2 53s ease-in-out infinite;
   animation-delay: -12s, -12s;
 }
@@ -120,7 +120,7 @@ button { cursor: pointer; }
   width: 300px; height: 300px;
   top: 26%; left: -140px;
   filter: blur(40px);
-  background: radial-gradient(circle at 45% 30%, rgba(239, 68, 68, .42), rgba(220, 38, 38, .22) 60%, transparent 76%);
+  background: radial-gradient(circle at 45% 30%, rgba(239, 68, 68, .23), rgba(220, 38, 38, .12) 60%, transparent 76%);
   animation: brewMorph3 60s ease-in-out infinite, brewDrift3 60s ease-in-out infinite;
   animation-delay: -27s, -27s;
 }
@@ -128,7 +128,7 @@ button { cursor: pointer; }
   width: 150px; height: 150px;
   top: 40%; right: -20px;
   filter: blur(22px);
-  background: radial-gradient(circle at 50% 50%, rgba(220, 38, 38, .36), rgba(220, 38, 38, .16) 55%, transparent 74%);
+  background: radial-gradient(circle at 50% 50%, rgba(220, 38, 38, .2), rgba(220, 38, 38, .09) 55%, transparent 74%);
   animation: brewMorph4 37s ease-in-out infinite, brewDrift4 37s ease-in-out infinite;
   animation-delay: -6s, -6s;
 }
@@ -136,7 +136,7 @@ button { cursor: pointer; }
   width: 360px; height: 360px;
   bottom: -110px; left: -90px;
   filter: blur(42px);
-  background: radial-gradient(circle at 40% 40%, rgba(248, 113, 113, .38), rgba(220, 38, 38, .2) 60%, transparent 76%);
+  background: radial-gradient(circle at 40% 40%, rgba(248, 113, 113, .21), rgba(220, 38, 38, .11) 60%, transparent 76%);
   animation: brewMorph5 55s ease-in-out infinite, brewDrift5 55s ease-in-out infinite;
   animation-delay: -19s, -19s;
 }
@@ -144,7 +144,7 @@ button { cursor: pointer; }
   width: 220px; height: 220px;
   bottom: 4%; right: -100px;
   filter: blur(30px);
-  background: radial-gradient(circle at 45% 45%, rgba(220, 38, 38, .4), rgba(185, 28, 28, .2) 60%, transparent 76%);
+  background: radial-gradient(circle at 45% 45%, rgba(220, 38, 38, .22), rgba(185, 28, 28, .11) 60%, transparent 76%);
   animation: brewMorph6 43s ease-in-out infinite, brewDrift6 43s ease-in-out infinite;
   animation-delay: -33s, -33s;
 }
@@ -152,7 +152,7 @@ button { cursor: pointer; }
   width: 130px; height: 130px;
   top: 62%; left: 40%;
   filter: blur(20px);
-  background: radial-gradient(circle at 50% 50%, rgba(239, 68, 68, .34), rgba(220, 38, 38, .14) 55%, transparent 74%);
+  background: radial-gradient(circle at 50% 50%, rgba(239, 68, 68, .19), rgba(220, 38, 38, .08) 55%, transparent 74%);
   animation: brewMorph7 31s ease-in-out infinite, brewDrift7 31s ease-in-out infinite;
   animation-delay: -3s, -3s;
 }
