@@ -425,7 +425,7 @@ function Agenda() {
     try { await api.updateStatus(id,newStatus); load(); } catch(e){setError(e.message);}
   }
 
-  const renderDayGroup = (date, i) => <section className="day-group" key={date} style={{"--i": Math.min(i,10)}}>
+  const renderDayGroup = (date, i) => <section className={`day-group ${date === today ? "today" : ""}`} key={date} style={{"--i": Math.min(i,10)}}>
     <div className="day-heading">
       <div><span className="day-dot"></span><h2>{formatDayHeading(date)}</h2></div>
       <span>{groupedAppointments[date].length} {groupedAppointments[date].length === 1 ? "agendamento" : "agendamentos"}</span>
