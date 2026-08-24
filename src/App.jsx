@@ -12,7 +12,16 @@ const STATUS = {
   no_show: "Não compareceu",
 };
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
+const todayISO = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type) => parts.find(p => p.type === type).value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+};
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState("barbeariavintageadm@gmail.com");
@@ -54,8 +63,8 @@ function Login({ onLogin }) {
 function Sidebar({ page, setPage, onLogout }) {
   const items = [
     ["dashboard", LayoutDashboard, "Dashboard"],
-    ["agenda", CalendarDays, "Agenda"],
     ["clientes", Users, "Clientes"],
+    ["agenda", CalendarDays, "Agenda"],
   ];
   return <aside className="sidebar">
     <div className="sidebar-brand"><img src="/logo.png" alt="Barbearia Vintage" /></div>
@@ -156,6 +165,10 @@ function Clients() {
     </div>
     {error && <div className="alert error">{error}</div>}
     <section className="panel">
+      <div className="section-title">
+        <div><h2>Todos os clientes</h2><p>Base cadastrada na barbearia.</p></div>
+        <span className="count-pill">{clients.length} {clients.length === 1 ? "cliente" : "clientes"}</span>
+      </div>
       <div className="client-list">
         {clients.map(c => <div className="client-row" key={c.id}>
           <div><strong>{c.name}</strong><span>{c.email}</span>{c.notes && <small>{c.notes}</small>}</div>

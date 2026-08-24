@@ -260,6 +260,18 @@ button { cursor: pointer; }
 .section-title h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.015em; }
 .section-title p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 
+.count-pill {
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 /* ---------------------------------------------------------------
    Toolbar / inputs
    --------------------------------------------------------------- */
