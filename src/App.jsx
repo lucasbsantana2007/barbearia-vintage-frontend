@@ -381,6 +381,7 @@ function Agenda() {
   const [status, setStatus] = useState("");
   const [appointments, setAppointments] = useState([]);
   const [modal, setModal] = useState(null);
+  const [showPast, setShowPast] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -398,6 +399,9 @@ function Agenda() {
   }, [appointments]);
 
   const dates = Object.keys(groupedAppointments).sort();
+  const today = todayISO();
+  const pastDates = dates.filter(d => d < today);
+  const upcomingDates = dates.filter(d => d >= today);
 
   const formatDayHeading = (dateString) => {
     const [year, month, day] = dateString.split("-").map(Number);
@@ -421,10 +425,25 @@ function Agenda() {
     try { await api.updateStatus(id,newStatus); load(); } catch(e){setError(e.message);}
   }
 
+  const renderDayGroup = (date, i) => <section className="day-group" key={date} style={{"--i": Math.min(i,10)}}>
+    <div className="day-heading">
+      <div><span className="day-dot"></span><h2>{formatDayHeading(date)}</h2></div>
+      <span>{groupedAppointments[date].length} {groupedAppointments[date].length === 1 ? "agendamento" : "agendamentos"}</span>
+    </div>
+    <div className="panel day-panel">
+      <AppointmentTable
+        appointments={groupedAppointments[date]}
+        onEdit={a=>setModal({type:"edit", appointment:a})}
+        onDelete={remove}
+        onStatus={changeStatus}
+      />
+    </div>
+  </section>;
+
   return <div className="page-fade">
-    <Header title="Agenda" subtitle="Role a página para visualizar os agendamentos de todos os dias." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
+    <Header title="Agenda" subtitle="Hoje aparece primeiro, seguido pelos próximos agendamentos." action={<button className="primary inline" onClick={()=>setModal({type:"new"})}><Plus size={18}/>Novo agendamento</button>}/>
     <div className="toolbar agenda-toolbar">
-      <div className="agenda-hint"><CalendarDays size={18}/><span>Todos os dias aparecem em sequência, organizados por data e horário.</span></div>
+      <div className="agenda-hint"><CalendarDays size={18}/><span>Dias anteriores ficam ocultos por padrão — use o botão abaixo para vê-los.</span></div>
       <label className="filter">Status<select value={status} onChange={e=>setStatus(e.target.value)}>
         <option value="">Todos</option>{Object.entries(STATUS).map(([v,l])=><option key={v} value={v}>{l}</option>)}
       </select></label>
@@ -432,20 +451,17 @@ function Agenda() {
     {error && <div className="alert error">{error}</div>}
 
     <div className="agenda-scroll-list">
-      {dates.map((date,i) => <section className="day-group" key={date} style={{"--i": Math.min(i,10)}}>
-        <div className="day-heading">
-          <div><span className="day-dot"></span><h2>{formatDayHeading(date)}</h2></div>
-          <span>{groupedAppointments[date].length} {groupedAppointments[date].length === 1 ? "agendamento" : "agendamentos"}</span>
-        </div>
-        <div className="panel day-panel">
-          <AppointmentTable
-            appointments={groupedAppointments[date]}
-            onEdit={a=>setModal({type:"edit", appointment:a})}
-            onDelete={remove}
-            onStatus={changeStatus}
-          />
-        </div>
-      </section>)}
+      {pastDates.length > 0 &&
+        <button type="button" className="agenda-past-toggle" onClick={()=>setShowPast(s=>!s)}>
+          <ChevronDown size={16} className={showPast ? "rotated" : ""}/>
+          {showPast ? "Ocultar dias anteriores" : `Ver dias anteriores (${pastDates.length})`}
+        </button>
+      }
+      {showPast && pastDates.map(renderDayGroup)}
+      {upcomingDates.map(renderDayGroup)}
+      {dates.length > 0 && !upcomingDates.length &&
+        <section className="panel"><Empty text="Nenhum agendamento a partir de hoje."/></section>
+      }
       {!dates.length && <section className="panel"><Empty text="Nenhum agendamento encontrado."/></section>}
     </div>
 
